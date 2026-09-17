@@ -1,0 +1,1103 @@
+openapi: 3.0.3
+info:
+  title: KHAM Commerce API
+  version: 1.0.0
+  description: API-first backend for KHAM Commerce OS. Laravel 12, Sanctum authentication, multi-market pricing, inventory,
+    customers, coupons and orders.
+servers:
+- url: http://127.0.0.1:8000/api/v1
+  description: Local Laravel development server
+tags:
+- name: Auth
+- name: Dashboard
+- name: Products
+- name: Catalog
+- name: Pricing
+- name: Inventory
+- name: Customers
+- name: Coupons
+- name: Orders
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login and receive a Sanctum bearer token
+      responses:
+        '200': &id001
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+        '401': &id002
+          description: Unauthenticated
+        '403': &id003
+          description: Forbidden
+        '422': &id004
+          description: Validation error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Get authenticated user
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Logout current token
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /dashboard:
+    get:
+      tags:
+      - Dashboard
+      summary: Get dashboard KPIs
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /products:
+    get:
+      tags:
+      - Products
+      summary: List products
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - draft
+          - active
+          - archived
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+    post:
+      tags:
+      - Products
+      summary: Create product
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+  /products/{product}:
+    parameters:
+    - name: product
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+      - Products
+      summary: Get product
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - Products
+      summary: Update product
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+    patch:
+      tags:
+      - Products
+      summary: Update product
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductRequest'
+    delete:
+      tags:
+      - Products
+      summary: Soft delete / archive product
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /categories:
+    get:
+      tags:
+      - Catalog
+      summary: List category tree
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Catalog
+      summary: Create category
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequest'
+  /brands:
+    get:
+      tags:
+      - Catalog
+      summary: List brands
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Catalog
+      summary: Create brand
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandRequest'
+  /currencies:
+    get:
+      tags:
+      - Catalog
+      summary: List currencies
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /markets:
+    get:
+      tags:
+      - Catalog
+      summary: List markets
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /warehouses:
+    get:
+      tags:
+      - Catalog
+      summary: List warehouses
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /prices/upsert:
+    post:
+      tags:
+      - Pricing
+      summary: Create or update variant price for a market
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceUpsertRequest'
+  /inventory:
+    get:
+      tags:
+      - Inventory
+      summary: List inventory stock
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: warehouse_id
+        in: query
+        schema:
+          type: integer
+      - name: low_stock
+        in: query
+        schema:
+          type: boolean
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+  /inventory/adjust:
+    post:
+      tags:
+      - Inventory
+      summary: Adjust on-hand inventory
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustRequest'
+  /inventory/movements:
+    get:
+      tags:
+      - Inventory
+      summary: List inventory movements
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: variant_id
+        in: query
+        schema:
+          type: integer
+      - name: warehouse_id
+        in: query
+        schema:
+          type: integer
+      - name: type
+        in: query
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+  /customers:
+    get:
+      tags:
+      - Customers
+      summary: List customers
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+    post:
+      tags:
+      - Customers
+      summary: Create customer
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+  /customers/{customer}:
+    parameters:
+    - name: customer
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+      - Customers
+      summary: Get customer with addresses and orders
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+    patch:
+      tags:
+      - Customers
+      summary: Update customer
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+  /coupons:
+    get:
+      tags:
+      - Coupons
+      summary: List coupons
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Coupons
+      summary: Create coupon
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+  /coupons/{coupon}:
+    parameters:
+    - name: coupon
+      in: path
+      required: true
+      schema:
+        type: integer
+    patch:
+      tags:
+      - Coupons
+      summary: Update coupon
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponRequest'
+  /orders:
+    get:
+      tags:
+      - Orders
+      summary: List orders
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: payment_status
+        in: query
+        schema:
+          type: string
+      - name: market_id
+        in: query
+        schema:
+          type: integer
+      - name: warehouse_id
+        in: query
+        schema:
+          type: integer
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+    post:
+      tags:
+      - Orders
+      summary: Create order and reserve inventory
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiEnvelope'
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+  /orders/{order}:
+    parameters:
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+      - Orders
+      summary: Get order detail
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+  /orders/{order}/status:
+    parameters:
+    - name: order
+      in: path
+      required: true
+      schema:
+        type: integer
+    patch:
+      tags:
+      - Orders
+      summary: Update order status and inventory workflow
+      responses:
+        '200': *id001
+        '401': *id002
+        '403': *id003
+        '422': *id004
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum token
+  schemas:
+    ApiEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data: {}
+        meta:
+          type: object
+        errors:
+          type: object
+      required:
+      - success
+      - code
+      - message
+      - data
+      - meta
+      - errors
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@example.com
+        password:
+          type: string
+          format: password
+          example: ChangeMe123!
+        device_name:
+          type: string
+          nullable: true
+          example: Apidog
+    VariantInput:
+      type: object
+      required:
+      - sku
+      properties:
+        sku:
+          type: string
+          example: ARGAN-50ML
+        barcode:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+          example: 50 ml
+        option_values:
+          type: object
+          nullable: true
+          example:
+            size: 50ml
+        weight_grams:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 80
+        cost_price:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+          example: 550
+    ProductRequest:
+      type: object
+      required:
+      - name
+      - slug
+      - status
+      properties:
+        brand_id:
+          type: integer
+          nullable: true
+        category_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+          example: Pure Argan Oil
+        slug:
+          type: string
+          example: pure-argan-oil
+        short_description:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        ingredients:
+          type: string
+          nullable: true
+        usage_instructions:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - draft
+          - active
+          - archived
+          example: active
+        track_inventory:
+          type: boolean
+          default: true
+        seo_title:
+          type: string
+          nullable: true
+        seo_description:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantInput'
+    CategoryRequest:
+      type: object
+      required:
+      - name
+      - slug
+      properties:
+        parent_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+          example: Haircare
+        slug:
+          type: string
+          example: haircare
+        description:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          default: 0
+        is_active:
+          type: boolean
+          default: true
+    BrandRequest:
+      type: object
+      required:
+      - name
+      - slug
+      properties:
+        name:
+          type: string
+          example: Atlas Rituals
+        slug:
+          type: string
+          example: atlas-rituals
+        origin_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+          example: MA
+        description:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+    PriceUpsertRequest:
+      type: object
+      required:
+      - variant_id
+      - market_id
+      - currency_id
+      - price
+      properties:
+        variant_id:
+          type: integer
+          example: 1
+        market_id:
+          type: integer
+          example: 1
+        currency_id:
+          type: integer
+          example: 1
+        price:
+          type: number
+          minimum: 0
+          example: 1250
+        compare_at_price:
+          type: number
+          nullable: true
+          example: 1500
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+    InventoryAdjustRequest:
+      type: object
+      required:
+      - variant_id
+      - warehouse_id
+      - quantity_delta
+      - reason
+      properties:
+        variant_id:
+          type: integer
+          example: 1
+        warehouse_id:
+          type: integer
+          example: 1
+        quantity_delta:
+          type: integer
+          example: 100
+        reason:
+          type: string
+          example: Opening stock
+    CustomerRequest:
+      type: object
+      required:
+      - first_name
+      properties:
+        first_name:
+          type: string
+          example: Ahmed
+        last_name:
+          type: string
+          nullable: true
+          example: Hassan
+        email:
+          type: string
+          format: email
+          nullable: true
+          example: ahmed@example.com
+        phone:
+          type: string
+          nullable: true
+          example: '+201000000000'
+        status:
+          type: string
+          nullable: true
+          example: active
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+          example:
+          - VIP
+        notes:
+          type: string
+          nullable: true
+        marketing_opt_in:
+          type: boolean
+          default: false
+    CouponRequest:
+      type: object
+      required:
+      - code
+      - name
+      - type
+      - value
+      properties:
+        code:
+          type: string
+          example: KHAM10
+        name:
+          type: string
+          example: 10% Launch Discount
+        type:
+          type: string
+          enum:
+          - fixed
+          - percentage
+          example: percentage
+        value:
+          type: number
+          minimum: 0
+          example: 10
+        min_spend:
+          type: number
+          nullable: true
+          minimum: 0
+          example: 500
+        max_discount:
+          type: number
+          nullable: true
+          minimum: 0
+          example: 300
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        max_uses:
+          type: integer
+          nullable: true
+          minimum: 1
+        max_uses_per_customer:
+          type: integer
+          nullable: true
+          minimum: 1
+        rules:
+          type: object
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+    AddressInput:
+      type: object
+      required:
+      - first_name
+      - line1
+      - city
+      - country_code
+      properties:
+        first_name:
+          type: string
+          example: Ahmed
+        last_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        line1:
+          type: string
+          example: 12 Tahrir Street
+        line2:
+          type: string
+          nullable: true
+        city:
+          type: string
+          example: Cairo
+        state:
+          type: string
+          nullable: true
+        postal_code:
+          type: string
+          nullable: true
+        country_code:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: EG
+    OrderItemInput:
+      type: object
+      required:
+      - variant_id
+      - quantity
+      properties:
+        variant_id:
+          type: integer
+          example: 1
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+    OrderCreateRequest:
+      type: object
+      required:
+      - market_id
+      - warehouse_id
+      - items
+      - shipping_address
+      properties:
+        customer_id:
+          type: integer
+          nullable: true
+        market_id:
+          type: integer
+          example: 1
+        warehouse_id:
+          type: integer
+          example: 1
+        coupon_code:
+          type: string
+          nullable: true
+          example: KHAM10
+        shipping_total:
+          type: number
+          minimum: 0
+          default: 0
+          example: 0
+        tax_total:
+          type: number
+          minimum: 0
+          default: 0
+          example: 0
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+        shipping_address:
+          $ref: '#/components/schemas/AddressInput'
+        billing_address:
+          allOf:
+          - $ref: '#/components/schemas/AddressInput'
+          nullable: true
+    OrderStatusRequest:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - processing
+          - packed
+          - shipped
+          - delivered
+          - cancelled
+          - returned
+          example: confirmed
