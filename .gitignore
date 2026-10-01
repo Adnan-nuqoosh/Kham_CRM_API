@@ -6,3 +6,4 @@
 /storage/logs/*.log
 /public/storage
 .DS_Store
+/storage/app/public/catalog/
