@@ -1,5 +1,5 @@
 <?php
-use App\Http\Controllers\Api\V1\{AuthController,CatalogController,CouponController,CustomerController,DashboardController,InventoryController,OrderController,PricingController,ProductController};
+use App\Http\Controllers\Api\V1\{AuthController,CatalogController,CouponController,CustomerController,DashboardController,InventoryController,MediaController,OrderController,PricingController,ProductController};
 use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function(){
  Route::post('/auth/login',[AuthController::class,'login'])->middleware('throttle:login');
@@ -8,7 +8,20 @@ Route::prefix('v1')->group(function(){
   Route::get('/dashboard',DashboardController::class)->middleware('permission:dashboard.view');
 
   Route::middleware('permission:products.view')->group(function(){Route::get('/products',[ProductController::class,'index']);Route::get('/products/{product}',[ProductController::class,'show']);Route::get('/categories',[CatalogController::class,'categories']);Route::get('/brands',[CatalogController::class,'brands']);});
-  Route::middleware('permission:products.manage')->group(function(){Route::post('/products',[ProductController::class,'store']);Route::match(['put','patch'],'/products/{product}',[ProductController::class,'update']);Route::delete('/products/{product}',[ProductController::class,'destroy']);Route::post('/categories',[CatalogController::class,'storeCategory']);Route::post('/brands',[CatalogController::class,'storeBrand']);});
+  Route::middleware('permission:products.manage')->group(function(){
+   Route::post('/products',[ProductController::class,'store']);
+   Route::match(['put','patch'],'/products/{product}',[ProductController::class,'update']);
+   Route::delete('/products/{product}',[ProductController::class,'destroy']);
+   Route::post('/categories',[CatalogController::class,'storeCategory']);
+   Route::post('/brands',[CatalogController::class,'storeBrand']);
+
+   Route::post('/categories/{category}/image',[MediaController::class,'uploadCategoryImage']);
+   Route::delete('/categories/{category}/image',[MediaController::class,'deleteCategoryImage']);
+   Route::post('/brands/{brand}/image',[MediaController::class,'uploadBrandLogo']);
+   Route::delete('/brands/{brand}/image',[MediaController::class,'deleteBrandLogo']);
+   Route::post('/products/{product}/images',[MediaController::class,'uploadProductImages']);
+   Route::delete('/products/{product}/images/{media}',[MediaController::class,'deleteProductImage']);
+  });
 
   Route::get('/currencies',[CatalogController::class,'currencies'])->middleware('permission:settings.manage');
   Route::get('/markets',[CatalogController::class,'markets'])->middleware('permission:settings.manage');
