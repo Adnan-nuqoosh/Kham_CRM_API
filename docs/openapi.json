@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "KHAM Commerce API",
-    "version": "1.0.1",
-    "description": "API-first multi-market commerce backend for KHAM. Import directly into Apidog."
+    "version": "1.1.0",
+    "description": "API-first multi-market commerce backend for KHAM. Product create/update supports images, market prices and stock in one request while dedicated maintenance endpoints remain available."
   },
   "servers": [
     {
@@ -371,30 +371,93 @@
         "tags": [
           "Products"
         ],
-        "summary": "Create product with variants",
+        "summary": "Create product with images, variants, market prices and opening stock",
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/ProductRequest"
-              },
-              "example": {
-                "name": "Pure Argan Oil",
-                "slug": "pure-argan-oil",
-                "status": "active",
-                "track_inventory": true,
-                "variants": [
-                  {
-                    "sku": "ARG-50",
-                    "title": "50ml",
-                    "option_values": {
-                      "size": "50ml"
+                "type": "object",
+                "required": [
+                  "name",
+                  "slug",
+                  "status"
+                ],
+                "properties": {
+                  "brand_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "category_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "short_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "ingredients": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "usage_instructions": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "archived"
+                    ]
+                  },
+                  "track_inventory": {
+                    "type": "boolean"
+                  },
+                  "seo_title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "seo_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON string when using multipart/form-data."
+                  },
+                  "images": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
                     },
-                    "weight_grams": 80,
-                    "cost_price": 450
+                    "description": "Optional product images (jpg, jpeg, png, webp; max 8 MB each)."
+                  },
+                  "image_alt_texts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional alt text values matching images[]."
+                  },
+                  "variants": {
+                    "type": "string",
+                    "description": "JSON array. Each variant may contain sku, barcode, title, option_values, weight_grams, cost_price, prices[] and stocks[]. prices[] accepts market_id,currency_id,price,compare_at_price,starts_at,ends_at,is_active. stocks[] accepts warehouse_id,quantity,reorder_level."
                   }
-                ]
+                }
               }
             }
           }
@@ -440,7 +503,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Single-form product creation. Send multipart/form-data. For nested data, send variants as a JSON string. Dedicated image, pricing and inventory endpoints remain available for later maintenance."
       }
     },
     "/products/{product}": {
@@ -507,7 +571,7 @@
         "tags": [
           "Products"
         ],
-        "summary": "Replace/update product",
+        "summary": "Replace/update product with media, pricing and stock",
         "parameters": [
           {
             "name": "product",
@@ -522,9 +586,84 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/ProductRequest"
+                "type": "object",
+                "properties": {
+                  "brand_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "category_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "short_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "ingredients": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "usage_instructions": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "archived"
+                    ]
+                  },
+                  "track_inventory": {
+                    "type": "boolean"
+                  },
+                  "seo_title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "seo_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON string when using multipart/form-data."
+                  },
+                  "images": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Optional product images (jpg, jpeg, png, webp; max 8 MB each)."
+                  },
+                  "image_alt_texts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional alt text values matching images[]."
+                  },
+                  "variants": {
+                    "type": "string",
+                    "description": "JSON array. Each variant may contain sku, barcode, title, option_values, weight_grams, cost_price, prices[] and stocks[]. prices[] accepts market_id,currency_id,price,compare_at_price,starts_at,ends_at,is_active. stocks[] accepts warehouse_id,quantity,reorder_level."
+                  }
+                }
               }
             }
           }
@@ -570,13 +709,14 @@
               }
             }
           }
-        }
+        },
+        "description": "Supports adding new images and updating nested variant prices/stocks in the same multipart request. Existing dedicated maintenance endpoints remain available."
       },
       "patch": {
         "tags": [
           "Products"
         ],
-        "summary": "Update product",
+        "summary": "Update product with media, pricing and stock",
         "parameters": [
           {
             "name": "product",
@@ -591,9 +731,84 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/ProductRequest"
+                "type": "object",
+                "properties": {
+                  "brand_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "category_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "short_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "ingredients": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "usage_instructions": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "archived"
+                    ]
+                  },
+                  "track_inventory": {
+                    "type": "boolean"
+                  },
+                  "seo_title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "seo_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON string when using multipart/form-data."
+                  },
+                  "images": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Optional product images (jpg, jpeg, png, webp; max 8 MB each)."
+                  },
+                  "image_alt_texts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional alt text values matching images[]."
+                  },
+                  "variants": {
+                    "type": "string",
+                    "description": "JSON array. Each variant may contain sku, barcode, title, option_values, weight_grams, cost_price, prices[] and stocks[]. prices[] accepts market_id,currency_id,price,compare_at_price,starts_at,ends_at,is_active. stocks[] accepts warehouse_id,quantity,reorder_level."
+                  }
+                }
               }
             }
           }
@@ -639,7 +854,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Supports adding new images and updating nested variant prices/stocks in the same multipart request. Existing dedicated maintenance endpoints remain available."
       },
       "delete": {
         "tags": [
@@ -706,7 +922,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "List category tree",
+        "summary": "List 3-level category tree",
         "responses": {
           "200": {
             "description": "Success",
@@ -748,17 +964,18 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns Category → Subcategory → Child Category."
       },
       "post": {
         "tags": [
           "Catalog"
         ],
-        "summary": "Create category",
+        "summary": "Create category with optional image",
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "required": [
@@ -768,7 +985,8 @@
                 "properties": {
                   "parent_id": {
                     "type": "integer",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "Omit for root category. Max hierarchy depth is 3."
                   },
                   "name": {
                     "type": "string"
@@ -780,9 +998,15 @@
                     "type": "string",
                     "nullable": true
                   },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "nullable": true
+                  },
                   "image_url": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "Optional external image URL. Uploaded image takes precedence."
                   },
                   "sort_order": {
                     "type": "integer",
@@ -793,12 +1017,6 @@
                     "default": true
                   }
                 }
-              },
-              "example": {
-                "name": "Haircare",
-                "slug": "haircare",
-                "sort_order": 1,
-                "is_active": true
               }
             }
           }
@@ -844,7 +1062,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Supports up to 3 hierarchy levels: Category → Subcategory → Child Category."
       }
     },
     "/brands": {
@@ -900,11 +1119,11 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Create brand",
+        "summary": "Create brand with optional logo",
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "required": [
@@ -928,21 +1147,22 @@
                     "type": "string",
                     "nullable": true
                   },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "nullable": true,
+                    "description": "Optional brand logo."
+                  },
                   "logo_url": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "Optional external logo URL. Uploaded image takes precedence."
                   },
                   "is_active": {
                     "type": "boolean",
                     "default": true
                   }
                 }
-              },
-              "example": {
-                "name": "Atlas Rituals",
-                "slug": "atlas-rituals",
-                "origin_country": "MA",
-                "is_active": true
               }
             }
           }
@@ -1146,7 +1366,7 @@
         "tags": [
           "Pricing"
         ],
-        "summary": "Create or update market price",
+        "summary": "Update market price (maintenance endpoint)",
         "requestBody": {
           "required": true,
           "content": {
@@ -1245,7 +1465,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use this for later price-only changes. Market price can also be supplied inside POST/PATCH /products via variants[].prices[]."
       }
     },
     "/inventory": {
@@ -1332,7 +1553,7 @@
         "tags": [
           "Inventory"
         ],
-        "summary": "Adjust on-hand stock",
+        "summary": "Adjust inventory (maintenance endpoint)",
         "requestBody": {
           "required": true,
           "content": {
@@ -1411,7 +1632,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Use this for later stock adjustments and movement history. Opening/current stock can also be supplied inside POST/PATCH /products via variants[].stocks[]."
       }
     },
     "/inventory/movements": {
