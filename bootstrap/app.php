@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Exceptions\UnauthorizedException as SpatieUnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -60,6 +61,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             function (Request $request, \Throwable $e): bool {
                 return $request->is('api/*') || $request->expectsJson();
+            }
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | 422 - Validation Error
+        |--------------------------------------------------------------------------
+        */
+        $exceptions->render(
+            function (ValidationException $e, Request $request) {
+                if ($request->is('api/*')) {
+                    return ApiResponse::error(
+                        $e->getMessage() ?: 'The given data was invalid.',
+                        'VALIDATION_ERROR',
+                        422,
+                        $e->errors()
+                    );
+                }
+
+                return null;
             }
         );
 
