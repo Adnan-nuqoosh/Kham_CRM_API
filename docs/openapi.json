@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "KHAM Commerce API",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "API-first multi-market commerce backend for KHAM. Product create/update supports images, market prices and stock in one request while dedicated maintenance endpoints remain available."
   },
   "servers": [
@@ -710,7 +710,7 @@
             }
           }
         },
-        "description": "Supports adding new images and updating nested variant prices/stocks in the same multipart request. Existing dedicated maintenance endpoints remain available."
+        "description": "JSON/non-file updates remain supported. For multipart/form-data or image uploads, use POST /products/{product}."
       },
       "patch": {
         "tags": [
@@ -855,7 +855,7 @@
             }
           }
         },
-        "description": "Supports adding new images and updating nested variant prices/stocks in the same multipart request. Existing dedicated maintenance endpoints remain available."
+        "description": "JSON/non-file updates remain supported. For multipart/form-data or image uploads, use POST /products/{product}."
       },
       "delete": {
         "tags": [
@@ -915,6 +915,151 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Update product with media, pricing and stock (multipart)",
+        "parameters": [
+          {
+            "name": "product",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brand_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "category_id": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "short_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "ingredients": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "usage_instructions": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "active",
+                      "archived"
+                    ]
+                  },
+                  "track_inventory": {
+                    "type": "boolean"
+                  },
+                  "seo_title": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "seo_description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON string when using multipart/form-data."
+                  },
+                  "images": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Optional product images (jpg, jpeg, png, webp; max 8 MB each)."
+                  },
+                  "image_alt_texts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional alt text values matching images[]."
+                  },
+                  "variants": {
+                    "type": "string",
+                    "description": "JSON array. Each variant may contain sku, barcode, title, option_values, weight_grams, cost_price, prices[] and stocks[]. prices[] accepts market_id,currency_id,price,compare_at_price,starts_at,ends_at,is_active. stocks[] accepts warehouse_id,quantity,reorder_level."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSuccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden / permission denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Preferred endpoint for multipart/form-data updates, including image uploads. PHP may not reliably parse multipart PUT/PATCH bodies, so use POST for product form updates that include multipart fields/files."
       }
     },
     "/categories": {
