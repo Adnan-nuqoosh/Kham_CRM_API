@@ -10,6 +10,8 @@ Route::prefix('v1')->group(function(){
   Route::middleware('permission:products.view')->group(function(){Route::get('/products',[ProductController::class,'index']);Route::get('/products/{product}',[ProductController::class,'show']);Route::get('/categories',[CatalogController::class,'categories']);Route::get('/brands',[CatalogController::class,'brands']);});
   Route::middleware('permission:products.manage')->group(function(){
    Route::post('/products',[ProductController::class,'store']);
+   // Multipart product updates (including new images) must use POST because PHP does not reliably parse multipart bodies for PUT/PATCH.
+   Route::post('/products/{product}',[ProductController::class,'update']);
    Route::match(['put','patch'],'/products/{product}',[ProductController::class,'update']);
    Route::delete('/products/{product}',[ProductController::class,'destroy']);
    Route::post('/categories',[CatalogController::class,'storeCategory']);
