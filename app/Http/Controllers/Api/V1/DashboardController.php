@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -7,27 +8,38 @@ use App\Models\InventoryStock;
 use App\Models\Order;
 use App\Models\Product;
 use App\Support\ApiResponse;
+use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
     public function __invoke()
     {
         $today = now()->startOfDay();
-        $weekStart = now()->startOfWeek();
-        $sevenDaysAgo = now()->subDays(6)->startOfDay();
+        $weekStart = now()->subDays(6)->startOfDay();
 
-        $salesLast7Days = Order::query()
-            ->where('placed_at', '>=', $sevenDaysAgo)
+        $ordersLast7 = Order::query()
+            ->where('placed_at', '>=', $weekStart)
+            ->selectRaw('DATE(placed_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        $revenueLast7 = Order::query()
+            ->where('placed_at', '>=', $weekStart)
             ->whereNotIn('status', ['cancelled', 'returned'])
-            ->selectRaw('DATE(placed_at) as date, COUNT(*) as orders, SUM(grand_total) as revenue')
-            ->groupByRaw('DATE(placed_at)')
-            ->orderBy('date')
-            ->get()
-            ->map(fn ($row) => [
-                'date' => $row->date,
-                'orders' => (int) $row->orders,
-                'revenue' => (float) $row->revenue,
-            ]);
+            ->selectRaw('DATE(placed_at) as day, COALESCE(SUM(grand_total), 0) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        $days = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->toDateString();
+            $days[] = [
+                'date' => $date,
+                'label' => Carbon::parse($date)->format('D'),
+                'orders' => (int) ($ordersLast7[$date] ?? 0),
+                'revenue' => (float) ($revenueLast7[$date] ?? 0),
+            ];
+        }
 
         $data = [
             'orders_today' => Order::where('placed_at', '>=', $today)->count(),
@@ -41,16 +53,18 @@ class DashboardController extends Controller
             'pending_orders' => Order::where('status', 'pending')->count(),
             'customers_total' => Customer::count(),
             'active_products' => Product::where('status', 'active')->count(),
-            'low_stock_skus' => InventoryStock::whereRaw('(on_hand - reserved - damaged) <= reorder_level')->count(),
-            'orders_by_status' => Order::selectRaw('status, COUNT(*) total')
+            'low_stock_skus' => InventoryStock::whereRaw(
+                '(on_hand - reserved - damaged) <= reorder_level'
+            )->count(),
+            'orders_by_status' => Order::selectRaw('status, COUNT(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status')
                 ->map(fn ($value) => (int) $value),
-            'sales_last_7_days' => $salesLast7Days,
-            'products_by_status' => Product::selectRaw('status, COUNT(*) total')
+            'products_by_status' => Product::selectRaw('status, COUNT(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status')
                 ->map(fn ($value) => (int) $value),
+            'sales_last_7_days' => $days,
         ];
 
         return ApiResponse::success($data, 'Dashboard fetched.', 'DASHBOARD');

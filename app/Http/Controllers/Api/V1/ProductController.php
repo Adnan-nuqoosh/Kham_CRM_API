@@ -34,19 +34,14 @@ class ProductController extends Controller
             );
         }
 
-        $products = $query->latest()->paginate(min((int) $request->get('per_page', 20), 100));
+        $products = $query->latest()->paginate(\App\Support\PaginationMeta::perPage($request, 20));
 
         return ApiResponse::success(
             $products->items(),
             'Products fetched.',
             'PRODUCT_LIST',
             200,
-            ['pagination' => [
-                'current_page' => $products->currentPage(),
-                'last_page' => $products->lastPage(),
-                'per_page' => $products->perPage(),
-                'total' => $products->total(),
-            ]]
+            \App\Support\PaginationMeta::from($products)
         );
     }
 

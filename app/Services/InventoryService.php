@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services;
 
 use App\Enums\MovementType;
@@ -9,14 +10,23 @@ use Illuminate\Validation\ValidationException;
 
 class InventoryService
 {
-    public function reserve(int $variantId, int $warehouseId, int $quantity, ?int $referenceId = null): InventoryStock
-    {
+    public function reserve(
+        int $variantId,
+        int $warehouseId,
+        int $quantity,
+        ?int $referenceId = null,
+    ): InventoryStock {
         return DB::transaction(function () use ($variantId, $warehouseId, $quantity, $referenceId) {
-            $stock = $this->lockedStock($variantId, $warehouseId);
+            $stock = $this->lockStock($variantId, $warehouseId);
 
             if ($quantity < 1 || $stock->available < $quantity) {
                 throw ValidationException::withMessages([
-                    'quantity' => ["Insufficient stock. Available: {$stock->available}."],
+                    'items' => [
+                        "Insufficient stock for variant #{$variantId} in the selected warehouse. Available: {$stock->available}.",
+                    ],
+                    'quantity' => [
+                        "Insufficient stock. Available: {$stock->available}.",
+                    ],
                 ]);
             }
 
@@ -39,11 +49,14 @@ class InventoryService
         });
     }
 
-    public function release(int $variantId, int $warehouseId, int $quantity, ?int $referenceId = null): void
-    {
+    public function release(
+        int $variantId,
+        int $warehouseId,
+        int $quantity,
+        ?int $referenceId = null,
+    ): void {
         DB::transaction(function () use ($variantId, $warehouseId, $quantity, $referenceId) {
-            $stock = $this->lockedStock($variantId, $warehouseId);
-
+            $stock = $this->lockStock($variantId, $warehouseId);
             $stock->update([
                 'reserved' => max(0, $stock->reserved - $quantity),
             ]);
@@ -62,10 +75,14 @@ class InventoryService
         });
     }
 
-    public function commitSale(int $variantId, int $warehouseId, int $quantity, ?int $referenceId = null): void
-    {
+    public function commitSale(
+        int $variantId,
+        int $warehouseId,
+        int $quantity,
+        ?int $referenceId = null,
+    ): void {
         DB::transaction(function () use ($variantId, $warehouseId, $quantity, $referenceId) {
-            $stock = $this->lockedStock($variantId, $warehouseId);
+            $stock = $this->lockStock($variantId, $warehouseId);
 
             if ($stock->on_hand < $quantity) {
                 throw ValidationException::withMessages([
@@ -92,7 +109,7 @@ class InventoryService
         });
     }
 
-    private function lockedStock(int $variantId, int $warehouseId): InventoryStock
+    private function lockStock(int $variantId, int $warehouseId): InventoryStock
     {
         $stock = InventoryStock::query()
             ->where('variant_id', $variantId)
@@ -102,7 +119,12 @@ class InventoryService
 
         if (!$stock) {
             throw ValidationException::withMessages([
-                'inventory' => ["No inventory exists for variant {$variantId} in warehouse {$warehouseId}."],
+                'warehouse_id' => [
+                    'No inventory record exists for this product in the selected warehouse. Add stock for that warehouse on the Inventory page (or when editing the product), then try again.',
+                ],
+                'items' => [
+                    "Missing inventory for variant #{$variantId} in warehouse #{$warehouseId}.",
+                ],
             ]);
         }
 

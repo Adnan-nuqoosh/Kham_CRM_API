@@ -9,6 +9,7 @@ use App\Models\Currency;
 use App\Models\Market;
 use App\Models\Warehouse;
 use App\Support\ApiResponse;
+use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -18,49 +19,48 @@ class CatalogController extends Controller
 {
     public function categories(Request $request)
     {
-        $query = Category::query();
+        // Full tree for pickers/forms when tree=1 or when no page/paginate requested.
+        $wantsTree = $request->boolean('tree')
+            || (!$request->filled('page') && !$request->boolean('paginate'));
 
-        $this->applyCategoryFilters($query, $request);
+        if ($wantsTree) {
+            $query = Category::query();
+            $this->applyCategoryFilters($query, $request);
 
-        if ($request->boolean('paginate') || $request->has('page')) {
-            $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
             $categories = $query
-                ->with('parent')
+                ->with([
+                    'children' => fn ($childQuery) => $childQuery
+                        ->orderBy('sort_order')
+                        ->orderBy('name')
+                        ->with([
+                            'children' => fn ($grandChildQuery) => $grandChildQuery
+                                ->orderBy('sort_order')
+                                ->orderBy('name'),
+                        ]),
+                ])
+                ->whereNull('parent_id')
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->paginate($perPage);
+                ->get();
 
-            return ApiResponse::success(
-                $categories->items(),
-                'Categories fetched.',
-                'CATEGORY_LIST',
-                200,
-                ['pagination' => [
-                    'current_page' => $categories->currentPage(),
-                    'last_page' => $categories->lastPage(),
-                    'per_page' => $categories->perPage(),
-                    'total' => $categories->total(),
-                ]]
-            );
+            return ApiResponse::success($categories, 'Category tree fetched.', 'CATEGORY_TREE');
         }
 
-        $categories = $query
-            ->with([
-                'children' => fn ($childQuery) => $childQuery
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->with([
-                        'children' => fn ($grandChildQuery) => $grandChildQuery
-                            ->orderBy('sort_order')
-                            ->orderBy('name'),
-                    ]),
-            ])
-            ->whereNull('parent_id')
+        $query = Category::query()->with(['parent.parent']);
+        $this->applyCategoryFilters($query, $request);
+
+        $paginator = $query
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get();
+            ->paginate(PaginationMeta::perPage($request, 20));
 
-        return ApiResponse::success($categories, 'Category tree fetched.', 'CATEGORY_TREE');
+        return ApiResponse::success(
+            $paginator->items(),
+            'Categories fetched.',
+            'CATEGORY_LIST',
+            200,
+            PaginationMeta::from($paginator)
+        );
     }
 
     public function showCategory(Category $category)
@@ -145,24 +145,23 @@ class CatalogController extends Controller
             );
         }
 
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+        if ($request->query->has('is_active') && $request->query('is_active') !== '') {
+            $query->where(
+                'is_active',
+                filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN)
+            );
         }
 
-        $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
-        $brands = $query->orderBy('name')->paginate($perPage);
+        $paginator = $query
+            ->orderBy('name')
+            ->paginate(PaginationMeta::perPage($request, 20));
 
         return ApiResponse::success(
-            $brands->items(),
+            $paginator->items(),
             'Brands fetched.',
             'BRAND_LIST',
             200,
-            ['pagination' => [
-                'current_page' => $brands->currentPage(),
-                'last_page' => $brands->lastPage(),
-                'per_page' => $brands->perPage(),
-                'total' => $brands->total(),
-            ]]
+            PaginationMeta::from($paginator)
         );
     }
 
@@ -240,8 +239,11 @@ class CatalogController extends Controller
             );
         }
 
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+        if ($request->query->has('is_active') && $request->query('is_active') !== '') {
+            $query->where(
+                'is_active',
+                filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN)
+            );
         }
     }
 

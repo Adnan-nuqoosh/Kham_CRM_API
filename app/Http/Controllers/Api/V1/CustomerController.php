@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Support\ApiResponse;
+use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -13,16 +15,23 @@ class CustomerController extends Controller
         $query = Customer::withCount('orders')->withSum('orders', 'grand_total');
 
         if ($request->filled('search')) {
+            $search = $request->search;
             $query->where(fn ($q) => $q
-                ->where('email', 'like', '%' . $request->search . '%')
-                ->orWhere('phone', 'like', '%' . $request->search . '%')
-                ->orWhere('first_name', 'like', '%' . $request->search . '%')
-                ->orWhere('last_name', 'like', '%' . $request->search . '%')
+                ->where('email', 'like', '%' . $search . '%')
+                ->orWhere('phone', 'like', '%' . $search . '%')
+                ->orWhere('first_name', 'like', '%' . $search . '%')
+                ->orWhere('last_name', 'like', '%' . $search . '%')
             );
         }
 
+        $paginator = $query->latest()->paginate(PaginationMeta::perPage($request, 20));
+
         return ApiResponse::success(
-            $query->latest()->paginate(min((int) $request->get('per_page', 20), 100))
+            $paginator->items(),
+            'Customers fetched.',
+            'CUSTOMER_LIST',
+            200,
+            PaginationMeta::from($paginator)
         );
     }
 

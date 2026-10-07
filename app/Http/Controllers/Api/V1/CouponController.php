@@ -1,18 +1,28 @@
 <?php
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Support\ApiResponse;
+use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = min(max((int) $request->get('per_page', 30), 1), 100);
+        $paginator = Coupon::query()
+            ->latest()
+            ->paginate(PaginationMeta::perPage($request, 30));
 
-        return ApiResponse::success(Coupon::latest()->paginate($perPage));
+        return ApiResponse::success(
+            $paginator->items(),
+            'Coupons fetched.',
+            'COUPON_LIST',
+            200,
+            PaginationMeta::from($paginator)
+        );
     }
 
     public function show(Coupon $coupon)
@@ -39,7 +49,12 @@ class CouponController extends Controller
 
         $data['code'] = strtoupper($data['code']);
 
-        return ApiResponse::success(Coupon::create($data), 'Coupon created.', 'COUPON_CREATED', 201);
+        return ApiResponse::success(
+            Coupon::create($data),
+            'Coupon created.',
+            'COUPON_CREATED',
+            201
+        );
     }
 
     public function update(Request $request, Coupon $coupon)
