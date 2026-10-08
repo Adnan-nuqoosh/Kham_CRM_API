@@ -110,7 +110,7 @@ class CatalogController extends Controller
 
         if (array_key_exists('parent_id', $data)) {
             $this->ensureCategoryParentIsValid($category, $data['parent_id']);
-            $this->ensureCategoryDepth($data['parent_id']);
+            $this->ensureCategoryMoveDepth($category, $data['parent_id']);
         }
 
         unset($data['image']);
@@ -321,6 +321,41 @@ class CatalogController extends Controller
 
             $category = $category->parent;
         }
+    }
+
+    private function ensureCategoryMoveDepth(Category $category, ?int $parentId): void
+    {
+        $newDepth = 1;
+
+        if ($parentId) {
+            $parent = Category::findOrFail($parentId);
+
+            while ($parent) {
+                $newDepth++;
+                $parent = $parent->parent;
+            }
+        }
+
+        $subtreeDepth = $this->categorySubtreeDepth($category);
+
+        if (($newDepth + $subtreeDepth - 1) > 3) {
+            throw ValidationException::withMessages([
+                'parent_id' => ['This move would make the category tree deeper than 3 levels.'],
+            ]);
+        }
+    }
+
+    private function categorySubtreeDepth(Category $category): int
+    {
+        $category->loadMissing('children.children');
+
+        if ($category->children->isEmpty()) {
+            return 1;
+        }
+
+        return 1 + $category->children
+            ->map(fn (Category $child) => $this->categorySubtreeDepth($child))
+            ->max();
     }
 
     private function deleteManagedFile(?string $url): void
