@@ -10,7 +10,9 @@ use App\Http\Controllers\Api\V1\{
     MediaController,
     OrderController,
     PricingController,
-    ProductController
+    ProductController,
+    FinanceExpenseController,
+    FinanceReportController
 };
 use Illuminate\Support\Facades\Route;
 
@@ -98,6 +100,20 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:coupons.manage');
         Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])
             ->middleware('permission:coupons.manage');
+
+        Route::get('/finance/report', [FinanceReportController::class, 'summary'])
+            ->middleware('permission:finance.view');
+
+        Route::get('/finance/expenses', [FinanceExpenseController::class, 'index'])
+            ->middleware('permission:finance.view');
+        Route::post('/finance/expenses', [FinanceExpenseController::class, 'store'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/expenses/{expense}', [FinanceExpenseController::class, 'update'])
+            ->middleware('permission:finance.manage');
+        Route::delete('/finance/expenses/{expense}', [FinanceExpenseController::class, 'destroy'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/order-items/{item}/cost', [FinanceExpenseController::class, 'setItemCost'])
+            ->middleware('permission:finance.manage');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
