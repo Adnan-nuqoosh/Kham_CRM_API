@@ -101,6 +101,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])
             ->middleware('permission:coupons.manage');
 
+        Route::get('/finance/report/export.csv', [FinanceReportController::class, 'exportCsv'])
+            ->middleware('permission:finance.view');
         Route::get('/finance/report', [FinanceReportController::class, 'summary'])
             ->middleware('permission:finance.view');
 
