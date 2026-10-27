@@ -18,5 +18,25 @@ class OrderService {
    return $order->load(['items','addresses','market.currency','warehouse','customer']);
   });
  }
- private function nextNumber():string { $prefix='KH-'.now()->format('Y').'-';$last=(int)(Order::query()->where('order_number','like',$prefix.'%')->max(DB::raw("CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)"))??0);return $prefix.str_pad((string)($last+1),6,'0',STR_PAD_LEFT); }
+ private function nextNumber():string {
+  $year=(int)now()->format('Y');
+  // Initialize the sequence from existing CRM orders to avoid colliding with historic order numbers.
+  $prefix='KH-'.$year.'-';
+  $driver = DB::connection()->getDriverName();
+
+  if ($driver === 'sqlite') {
+   $existingMax = (int) (Order::query()
+    ->where('order_number', 'like', $prefix.'%')
+    ->max(DB::raw("CAST(SUBSTR(order_number, LENGTH('".$prefix."') + 1) AS INTEGER)")) ?? 0);
+  } else {
+   $existingMax = (int) (Order::query()
+    ->where('order_number', 'like', $prefix.'%')
+    ->max(DB::raw("CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)")) ?? 0);
+  }
+  DB::table('store_order_sequences')->insertOrIgnore(['year'=>$year,'last_number'=>$existingMax]);
+  $row=DB::table('store_order_sequences')->where('year',$year)->lockForUpdate()->first();
+  $next=(int)$row->last_number+1;
+  DB::table('store_order_sequences')->where('year',$year)->update(['last_number'=>$next]);
+  return 'KH-'.$year.'-'.str_pad((string)$next,6,'0',STR_PAD_LEFT);
+ }
 }

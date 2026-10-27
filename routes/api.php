@@ -109,3 +109,5 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:orders.manage');
     });
 });
+
+require __DIR__ . '/storefront.php';
