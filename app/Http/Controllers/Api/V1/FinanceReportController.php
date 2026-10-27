@@ -92,4 +92,28 @@ class FinanceReportController extends Controller
             'profit_status' => $profitReady ? 'provisional' : 'incomplete_cost_data',
         ], 'Finance report generated.', 'FINANCE_REPORT');
     }
+    public function exportCsv(Request $request)
+    {
+        $payload = $this->summary($request)->getData(true);
+        $data = $payload['data'];
+        $fields = ['period', 'from', 'to', 'market_id', 'currency_code',
+            'total_orders', 'delivered_orders', 'delivered_sales',
+            'paid_delivered_sales', 'operating_expenses', 'known_cost_of_goods',
+            'missing_cost_items', 'gross_profit', 'net_profit', 'profit_status'];
+
+        return response()->streamDownload(function () use ($data, $fields) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $fields);
+            $row = [];
+            foreach ($fields as $field) {
+                $value = $data[$field] ?? '';
+                if (is_string($value) && preg_match('/^[=+@-]/', $value)) {
+                    $value = "'" . $value;
+                }
+                $row[] = $value;
+            }
+            fputcsv($out, $row);
+            fclose($out);
+        }, 'kham-finance-report.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
 }
