@@ -108,7 +108,7 @@ try {
         [
             'order_id' => $orderId, 'sku' => 'FIN-A', 'name' => 'Test product A',
             'quantity' => 2, 'unit_price' => 60, 'line_total' => 120,
-            'unit_cost_snapshot' => 30, 'created_at' => now(), 'updated_at' => now(),
+            'unit_cost_snapshot' => 30, 'unit_cost_currency_code' => 'AED', 'created_at' => now(), 'updated_at' => now(),
         ],
         [
             'order_id' => $orderId, 'sku' => 'FIN-B', 'name' => 'Test product B',
@@ -130,7 +130,7 @@ try {
     DB::table('order_items')->insert([
         'order_id' => $egOrderId, 'sku' => 'FIN-EG', 'name' => 'Other market fixture',
         'quantity' => 1, 'unit_price' => 1000, 'line_total' => 1000,
-        'unit_cost_snapshot' => 100, 'created_at' => now(), 'updated_at' => now(),
+        'unit_cost_snapshot' => 100, 'unit_cost_currency_code' => 'EGP', 'created_at' => now(), 'updated_at' => now(),
     ]);
     DB::table('finance_expenses')->insert([
         'market_id' => $eg->id, 'currency_code' => 'EGP', 'category' => 'QA',
@@ -160,6 +160,7 @@ try {
 
     DB::table('order_items')->where('id', $missingItemId)->update([
         'unit_cost_snapshot' => 15,
+        'unit_cost_currency_code' => 'AED',
     ]);
     [$status, $response] = $send($path);
     $data = $response['data'] ?? [];
@@ -178,6 +179,25 @@ try {
     $assert($equalMoney($data['gross_profit'] ?? null, 120)
         && $equalMoney($data['net_profit'] ?? null, 101.25),
         'Provisional gross and net arithmetic matches current reporting definition');
+
+    DB::table('order_items')->where('id', $missingItemId)->update([
+        'unit_cost_currency_code' => 'EGP',
+    ]);
+    [$status, $response] = $send($path);
+    $data = $response['data'] ?? [];
+    $assert($status === 200 && ($data['profit_status'] ?? null) === 'unverified_cost_currency'
+        && ($data['unverified_cost_currency_items'] ?? null) === 1
+        && array_key_exists('net_profit', $data) && $data['net_profit'] === null
+        && $equalMoney($data['known_cost_of_goods'] ?? null, 60),
+        'Cross-currency cost is excluded and profit withheld');
+    DB::table('order_items')->where('id', $missingItemId)->update([
+        'unit_cost_currency_code' => null,
+    ]);
+    [$status, $response] = $send($path);
+    $data = $response['data'] ?? [];
+    $assert($status === 200 && ($data['profit_status'] ?? null) === 'unverified_cost_currency'
+        && ($data['unverified_cost_currency_items'] ?? null) === 1,
+        'Legacy cost without currency cannot produce profit');
 
     [$status, $response] = $send('/api/v1/finance/report?period=daily&market_id=' . $eg->id);
     $egData = $response['data'] ?? [];
