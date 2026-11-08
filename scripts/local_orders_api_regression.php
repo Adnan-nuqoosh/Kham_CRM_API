@@ -81,6 +81,12 @@ try {
                 'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]
         );
     }
+    // Product cost is explicitly labelled EGP. Never convert it into AED/SAR
+    // without an approved historical FX policy.
+    DB::table('product_variants')->where('id', $stock->variant_id)->update([
+        'cost_price' => 12.50,
+        'cost_currency_code' => 'EGP',
+    ]);
     $place = static function (string $marketCode, int $requestedWarehouse) use ($send, $markets, $stock): array {
         return $send('POST', '/api/v1/orders', [
             'market_id' => $markets[$marketCode]->id,
@@ -101,6 +107,15 @@ try {
         && ($uae['data']['currency_code'] ?? '') === 'AED', 'UAE API order uses Egypt warehouse and AED');
     apiCheck((float) ($uae['data']['items'][0]['unit_price'] ?? 0) === 25.0,
         'Client-supplied unit price ignored in favor of CRM market price');
+    apiCheck((float) ($uae['data']['items'][0]['unit_cost_snapshot'] ?? -1) === 12.50
+        && ($uae['data']['items'][0]['unit_cost_currency_code'] ?? '') === 'EGP',
+        'UAE order snapshots Egypt cost with original EGP currency, not AED');
+    DB::table('product_variants')->where('id', $stock->variant_id)->update([
+        'cost_price' => 99.00,
+    ]);
+    apiCheck((float) DB::table('order_items')->where('order_id', $uaeId)
+        ->value('unit_cost_snapshot') === 12.50,
+        'Historical cost snapshot stays unchanged after product cost update');
 
     [$status, $order] = $send('GET', '/api/v1/orders/' . $uaeId);
     apiCheck($status === 200 && (int) ($order['data']['id'] ?? 0) === $uaeId,
@@ -124,10 +139,18 @@ try {
     [$status, $result] = $send('PATCH', '/api/v1/orders/' . $uaeId . '/status', ['status' => 'processing']);
     apiCheck($status === 422, 'Invalid backwards order status rejected by API');
 
+    // Unknown source currency must not be treated as an order-currency cost.
+    DB::table('product_variants')->where('id', $stock->variant_id)->update([
+        'cost_price' => 99.00,
+        'cost_currency_code' => null,
+    ]);
     [$status, $ksa] = $place('SA', $warehouse->id);
     apiCheck($status === 201 && ($ksa['data']['currency_code'] ?? '') === 'SAR',
         'KSA API order created with SAR and shared Egypt warehouse');
     $ksaId = (int) ($ksa['data']['id'] ?? 0);
+    apiCheck(($ksa['data']['items'][0]['unit_cost_snapshot'] ?? null) === null
+        && ($ksa['data']['items'][0]['unit_cost_currency_code'] ?? null) === null,
+        'Unverified product cost currency leaves order cost incomplete');
     apiCheck((int) $state()->reserved === $initialStock['reserved'] + 1,
         'KSA order reserves one unit of Egypt stock');
     [$status, $result] = $send('PATCH', '/api/v1/orders/' . $ksaId . '/status', ['status' => 'cancelled']);
