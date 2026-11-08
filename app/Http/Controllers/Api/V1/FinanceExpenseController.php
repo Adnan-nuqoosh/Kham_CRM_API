@@ -63,8 +63,18 @@ class FinanceExpenseController extends Controller
 
     public function setItemCost(Request $request, \App\Models\OrderItem $item)
     {
-        $data = $request->validate(['unit_cost_snapshot' => ['required', 'numeric', 'min:0', 'max:999999999999']]);
+        $data = $request->validate([
+            'unit_cost_snapshot' => ['required', 'numeric', 'min:0', 'max:999999999999'],
+            'unit_cost_currency_code' => ['required', 'string', 'size:3', 'exists:currencies,code'],
+        ]);
+        $currency = \App\Models\Currency::query()
+            ->where('code', strtoupper($data['unit_cost_currency_code']))
+            ->where('is_active', true)->first();
+        if (!$currency) {
+            throw ValidationException::withMessages(['unit_cost_currency_code' => ['An active currency is required.']]);
+        }
         $item->unit_cost_snapshot = $data['unit_cost_snapshot'];
+        $item->unit_cost_currency_code = $currency->code;
         $item->save();
         return ApiResponse::success($item->fresh(), 'Historical item cost saved.', 'FINANCE_ITEM_COST_UPDATED');
     }
