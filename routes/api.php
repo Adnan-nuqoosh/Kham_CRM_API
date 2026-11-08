@@ -10,7 +10,9 @@ use App\Http\Controllers\Api\V1\{
     MediaController,
     OrderController,
     PricingController,
-    ProductController
+    ProductController,
+    ShippingRuleController,
+    CheckoutQuoteController
 };
 use Illuminate\Support\Facades\Route;
 
@@ -98,6 +100,17 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:coupons.manage');
         Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])
             ->middleware('permission:coupons.manage');
+
+        // Authenticated CRM quote: tax is deliberately not configured yet.
+        Route::post('/checkout/quote', CheckoutQuoteController::class)
+            ->middleware('permission:orders.manage');
+
+        Route::get('/shipping-rules', [ShippingRuleController::class, 'index'])
+            ->middleware('permission:settings.manage');
+        Route::post('/shipping-rules', [ShippingRuleController::class, 'store'])
+            ->middleware('permission:settings.manage');
+        Route::patch('/shipping-rules/{shippingRule}', [ShippingRuleController::class, 'update'])
+            ->middleware('permission:settings.manage');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
