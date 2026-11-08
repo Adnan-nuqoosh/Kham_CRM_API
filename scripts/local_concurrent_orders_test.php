@@ -35,7 +35,7 @@ function check(bool $ok, string $label): void {
     echo 'PASS: ' . $label . PHP_EOL;
 }
 function worker(array $args): void {
-    [, $db, $variant, $dir, $id] = $args;
+    [, $db, $variant, $dir, $id, $marketCode] = $args;
     localGuard();
     switchDb($db);
     file_put_contents($dir . DIRECTORY_SEPARATOR . $id . '.ready', 'ready');
@@ -46,23 +46,23 @@ function worker(array $args): void {
     }
     try {
         $order = app(OrderService::class)->create([
-            'market_id' => (int) DB::table('markets')->where('code', 'AE')->value('id'),
+            'market_id' => (int) DB::table('markets')->where('code', $marketCode)->value('id'),
             'items' => [['variant_id' => (int) $variant, 'quantity' => 1]],
         ]);
-        $result = ['status' => 'success', 'number' => $order->order_number];
+        $result = ['status' => 'success', 'number' => $order->order_number, 'market' => $marketCode, 'currency' => $order->currency_code, 'warehouse_id' => $order->warehouse_id];
     } catch (ValidationException $e) {
-        $result = ['status' => 'rejected'];
+        $result = ['status' => 'rejected', 'market' => $marketCode, 'errors' => $e->errors()];
     } catch (Throwable $e) {
         $result = ['status' => 'error', 'class' => get_class($e), 'message' => $e->getMessage()];
     }
     file_put_contents($dir . DIRECTORY_SEPARATOR . $id . '.json', json_encode($result, JSON_THROW_ON_ERROR));
 }
-function pair(string $db, int $variant, string $dir): array {
+function pair(string $db, int $variant, string $dir, array $marketCodes = ['AE', 'AE']): array {
     if (!mkdir($dir, 0700, true) && !is_dir($dir)) throw new RuntimeException('Cannot make temporary worker directory.');
     $processes = [];
     try {
-        foreach (['a', 'b'] as $id) {
-            $cmd = [PHP_BINARY, __FILE__, 'worker', $db, (string) $variant, $dir, $id];
+        foreach (['a', 'b'] as $index => $id) {
+            $cmd = [PHP_BINARY, __FILE__, 'worker', $db, (string) $variant, $dir, $id, $marketCodes[$index]];
             $pipes = [];
             $proc = proc_open($cmd, [
                 0 => ['pipe', 'r'],
@@ -124,18 +124,40 @@ try {
         $now = now();
         $egp = DB::table('currencies')->insertGetId(['code'=>'EGP','name'=>'Egyptian Pound','symbol'=>'EGP','created_at'=>$now,'updated_at'=>$now]);
         $aed = DB::table('currencies')->insertGetId(['code'=>'AED','name'=>'UAE Dirham','symbol'=>'AED','created_at'=>$now,'updated_at'=>$now]);
+        $sar = DB::table('currencies')->insertGetId(['code'=>'SAR','name'=>'Saudi Riyal','symbol'=>'SAR','created_at'=>$now,'updated_at'=>$now]);
         $eg = DB::table('markets')->insertGetId(['name'=>'Egypt','code'=>'EG','country_code'=>'EG','currency_id'=>$egp,'created_at'=>$now,'updated_at'=>$now]);
         $ae = DB::table('markets')->insertGetId(['name'=>'UAE','code'=>'AE','country_code'=>'AE','currency_id'=>$aed,'created_at'=>$now,'updated_at'=>$now]);
+        $sa = DB::table('markets')->insertGetId(['name'=>'Saudi Arabia','code'=>'SA','country_code'=>'SA','currency_id'=>$sar,'created_at'=>$now,'updated_at'=>$now]);
         $wh = DB::table('warehouses')->insertGetId(['market_id'=>$eg,'name'=>'Egypt Test Warehouse','code'=>'EG-01','created_at'=>$now,'updated_at'=>$now]);
         $product = DB::table('products')->insertGetId(['name'=>'Concurrency Test','slug'=>'concurrency-test','status'=>'active','created_at'=>$now,'updated_at'=>$now]);
-        foreach (['two_success'=>2,'oversell'=>1] as $scenario => $initialStock) {
+        $scenarios = [
+            'two_success' => ['stock' => 2, 'markets' => ['AE', 'AE']],
+            'oversell' => ['stock' => 1, 'markets' => ['AE', 'AE']],
+            'cross_market_two_success' => ['stock' => 2, 'markets' => ['AE', 'SA']],
+            'cross_market_oversell' => ['stock' => 1, 'markets' => ['AE', 'SA']],
+        ];
+        foreach ($scenarios as $scenario => $spec) {
+            $initialStock = $spec['stock'];
             $variant = DB::table('product_variants')->insertGetId(['product_id'=>$product,'sku'=>'TEST-'.$scenario,'created_at'=>$now,'updated_at'=>$now]);
             DB::table('product_market_prices')->insert(['variant_id'=>$variant,'market_id'=>$ae,'currency_id'=>$aed,'price'=>25,'created_at'=>$now,'updated_at'=>$now]);
+            DB::table('product_market_prices')->insert(['variant_id'=>$variant,'market_id'=>$sa,'currency_id'=>$sar,'price'=>30,'created_at'=>$now,'updated_at'=>$now]);
             DB::table('inventory_stocks')->insert(['variant_id'=>$variant,'warehouse_id'=>$wh,'on_hand'=>$initialStock,'reserved'=>0,'created_at'=>$now,'updated_at'=>$now]);
-            $results = pair($db, $variant, $dir . DIRECTORY_SEPARATOR . $scenario);
+            $results = pair($db, $variant, $dir . DIRECTORY_SEPARATOR . $scenario, $spec['markets']);
             $outcomes = array_column($results, 'status');
             $successes = count(array_filter($outcomes, fn ($v) => $v === 'success'));
             $rejections = count(array_filter($outcomes, fn ($v) => $v === 'rejected'));
+            check(array_column($results, 'market') === $spec['markets'], $scenario . ': workers used intended sales markets');
+            foreach ($results as $result) {
+                if ($result['status'] === 'success') {
+                    check($result['currency'] === ($result['market'] === 'AE' ? 'AED' : 'SAR')
+                        && (int) $result['warehouse_id'] === $wh,
+                        $scenario . ': ' . $result['market'] . ' order uses local currency and Egypt warehouse');
+                } elseif ($result['status'] === 'rejected') {
+                    $messages = json_encode($result['errors'] ?? []);
+                    check(str_contains(strtolower($messages), 'insufficient stock'),
+                        $scenario . ': rejection is due to insufficient shared stock');
+                }
+            }
             check($successes === $initialStock && $rejections === 2 - $initialStock,
                 $scenario . ' outcomes: ' . json_encode($results));
             $orders = DB::table('order_items')->join('orders','orders.id','=','order_items.order_id')
@@ -147,9 +169,9 @@ try {
                 $scenario . ': reserved stock matches successful orders');
         }
         $numbers = DB::table('orders')->pluck('order_number')->all();
-        check(count($numbers) === 3 && count(array_unique($numbers)) === 3, 'All successful orders have unique numbers');
-        check((int) DB::table('order_number_sequences')->where('year',(int) now()->format('Y'))->value('last_number') === 3,
-            'Order sequence advanced exactly three times');
+        check(count($numbers) === 6 && count(array_unique($numbers)) === 6, 'All successful orders across UAE/KSA have unique numbers');
+        check((int) DB::table('order_number_sequences')->where('year',(int) now()->format('Y'))->value('last_number') === 6,
+            'Order sequence advanced exactly six times');
         echo "ALL ISOLATED CONCURRENCY TESTS PASSED.\n";
     } finally {
         config(['database.connections.mysql.database' => 'kham_crm_api']);
