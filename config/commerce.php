@@ -8,4 +8,7 @@ return [
     'configured_shipping_orders_enabled' => env('COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED', false),
     // Never enables production checkout. Local mock flow only; no real payment.
     'storefront_test_checkout_enabled' => env('COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED', false),
+    // Sandbox-only service; no checkout route or payment status mutation yet.
+    'myfatoorah_sandbox_enabled' => env('MYFATOORAH_SANDBOX_ENABLED', false),
+    'myfatoorah_sandbox_token' => env('MYFATOORAH_SANDBOX_TOKEN'),
 ];
