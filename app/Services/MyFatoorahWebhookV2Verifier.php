@@ -59,14 +59,19 @@ final class MyFatoorahWebhookV2Verifier
         $invoiceId = (string) data_get($data, 'Invoice.Id', '');
         $paymentId = (string) data_get($data, 'Transaction.PaymentId', '');
         $externalId = (string) data_get($data, 'Invoice.ExternalIdentifier', '');
+        $eventReference = (string) data_get($event, 'Event.Reference', '');
 
-        if ($invoiceId === '' || $paymentId === '' || $externalId === '') {
+        if ($invoiceId === '' || $paymentId === '' || $externalId === ''
+            || !preg_match('/^[A-Za-z0-9_-]{1,128}$/D', $eventReference)) {
             throw ValidationException::withMessages([
                 'event' => ['Signed invoice, payment and external order identifiers are required.'],
             ]);
         }
 
         return [
+            // Reference is not covered by the V2 signature: never use it as
+            // the only replay key; also deduplicate by provider payment ID.
+            'event_reference' => $eventReference,
             'invoice_id' => $invoiceId,
             'payment_id' => $paymentId,
             'external_identifier' => $externalId,
