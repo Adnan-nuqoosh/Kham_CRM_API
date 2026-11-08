@@ -18,8 +18,11 @@ use App\Http\Controllers\Api\V1\{
 };
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
+use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/checkout/test-order', LocalGuestCheckoutController::class)
+        ->middleware('throttle:storefront-test-order');
     Route::post('/storefront/checkout/quote', PublicCheckoutQuoteController::class)
         ->middleware('throttle:storefront-quote');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
