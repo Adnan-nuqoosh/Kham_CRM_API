@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Enums\ProductStatus;
 use App\Models\Market;
 use App\Models\ProductVariant;
 use App\Services\CouponService;
@@ -31,7 +32,7 @@ class CheckoutQuoteController extends Controller
         $subtotal = 0.0;
         foreach ($data['items'] as $item) {
             $variant = ProductVariant::with('product')->findOrFail($item['variant_id']);
-            if (!$variant->is_active || !$variant->product || $variant->product->status !== 'active') {
+            if (!$variant->is_active || !$variant->product || $variant->product->status !== ProductStatus::Active) {
                 throw ValidationException::withMessages(['items' => ['One or more products are unavailable.']]);
             }
             $price = $pricing->priceFor($variant, (int) $market->id);
