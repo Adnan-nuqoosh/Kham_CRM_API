@@ -5,4 +5,5 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider { public function register():void{} public function boot():void{RateLimiter::for('login',fn(Request $r)=>Limit::perMinute(10)->by($r->ip()));
-        RateLimiter::for('storefront-quote', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));} }
+        RateLimiter::for('storefront-quote', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+        RateLimiter::for('storefront-test-order', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));} }
