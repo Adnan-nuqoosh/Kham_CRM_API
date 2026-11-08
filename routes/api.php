@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\V1\{
     PricingController,
     ProductController,
     ShippingRuleController,
-    CheckoutQuoteController
+    CheckoutQuoteController,
+    FinanceExpenseController,
+    FinanceReportController
 };
 use Illuminate\Support\Facades\Route;
 
@@ -111,6 +113,21 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:settings.manage');
         Route::patch('/shipping-rules/{shippingRule}', [ShippingRuleController::class, 'update'])
             ->middleware('permission:settings.manage');
+
+        Route::get('/finance/report/export.csv', [FinanceReportController::class, 'exportCsv'])
+            ->middleware('permission:finance.view');
+        Route::get('/finance/report', [FinanceReportController::class, 'summary'])
+            ->middleware('permission:finance.view');
+        Route::get('/finance/expenses', [FinanceExpenseController::class, 'index'])
+            ->middleware('permission:finance.view');
+        Route::post('/finance/expenses', [FinanceExpenseController::class, 'store'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/expenses/{expense}', [FinanceExpenseController::class, 'update'])
+            ->middleware('permission:finance.manage');
+        Route::delete('/finance/expenses/{expense}', [FinanceExpenseController::class, 'destroy'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/order-items/{item}/cost', [FinanceExpenseController::class, 'setItemCost'])
+            ->middleware('permission:finance.manage');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
