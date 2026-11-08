@@ -146,8 +146,13 @@ try {
         'AED report succeeds without mixing EGP');
     $assert(($data['missing_cost_items'] ?? null) === 1,
         'Missing historical cost is detected');
-    $assert(($data['gross_profit'] ?? 'NOT_NULL') === null
-        && ($data['net_profit'] ?? 'NOT_NULL') === null
+    // Null coalescing (??) treats an existing null as absent; use
+    // array_key_exists to distinguish an intentional null profit from
+    // a missing response field.
+    $assert(array_key_exists('gross_profit', $data)
+        && $data['gross_profit'] === null
+        && array_key_exists('net_profit', $data)
+        && $data['net_profit'] === null
         && ($data['profit_status'] ?? null) === 'incomplete_cost_data',
         'Profit is withheld when a delivered item has no cost');
     $assert($equalMoney($data['known_cost_of_goods'] ?? null, 60),
