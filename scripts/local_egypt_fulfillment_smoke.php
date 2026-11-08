@@ -80,6 +80,10 @@ try {
     };
     $status = app(OrderStatusService::class);
 
+    $year = (int) now()->format('Y');
+    $initialSequence = DB::table('order_number_sequences')->where('year', $year)->value('last_number');
+    $initialSequence = $initialSequence === null ? 0 : (int) $initialSequence;
+
     $uae = $create('AE', 2);
     $check($uae->warehouse_id === $warehouse->id && $uae->currency_code === 'AED',
         'UAE order uses Egypt warehouse and AED');
@@ -116,6 +120,12 @@ try {
     $egypt = $create('EG', 1);
     $check($egypt->warehouse_id === $warehouse->id && $egypt->currency_code === 'EGP',
         'Egypt order uses Egypt warehouse and EGP');
+    $numbers = [$uae->order_number, $ksa->order_number, $egypt->order_number];
+    $check(count(array_unique($numbers)) === 3, 'Sequential orders receive unique order numbers');
+    $check(
+        DB::table('order_number_sequences')->where('year', $year)->value('last_number') == $initialSequence + 3,
+        'Order-number sequence advances once per successful order'
+    );
     $status->transition($egypt, OrderStatus::Cancelled);
     $check((int) $state()->reserved === $initialReserved,
         'Egypt cancellation releases reserved stock');
