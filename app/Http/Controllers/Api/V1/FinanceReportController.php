@@ -63,12 +63,20 @@ class FinanceReportController extends Controller
             ->where('o.status', 'delivered')
             ->whereBetween('o.placed_at', [$from, $to]);
         $missingCostItems = (clone $items)->whereNull('oi.unit_cost_snapshot')->count();
+        $currencyMismatchItems = (clone $items)
+            ->whereNotNull('oi.unit_cost_snapshot')
+            ->where(function ($query) use ($currency) {
+                $query->whereNull('oi.unit_cost_currency_code')
+                    ->orWhere('oi.unit_cost_currency_code', '<>', $currency);
+            })->count();
+        // Only same-currency historical costs are additive to market sales.
+        // Cross-currency costs require a documented historical FX conversion policy.
         $knownCogs = (float) (clone $items)
             ->whereNotNull('oi.unit_cost_snapshot')
+            ->where('oi.unit_cost_currency_code', $currency)
             ->selectRaw('COALESCE(SUM(oi.quantity * oi.unit_cost_snapshot), 0) AS cogs')->value('cogs');
 
-        // Profit is null until every delivered order item has a recorded unit cost.
-        $profitReady = $missingCostItems === 0;
+        $profitReady = $missingCostItems === 0 && $currencyMismatchItems === 0;
         $grossProfit = $profitReady ? round($sales - $knownCogs, 4) : null;
         $netProfit = $profitReady ? round($sales - $knownCogs - $expenses, 4) : null;
 
@@ -87,9 +95,10 @@ class FinanceReportController extends Controller
             'expense_categories' => $expenseCategories,
             'known_cost_of_goods' => round($knownCogs, 4),
             'missing_cost_items' => $missingCostItems,
+            'unverified_cost_currency_items' => $currencyMismatchItems,
             'gross_profit' => $grossProfit,
             'net_profit' => $netProfit,
-            'profit_status' => $profitReady ? 'provisional' : 'incomplete_cost_data',
+            'profit_status' => $profitReady ? 'provisional' : ($missingCostItems > 0 ? 'incomplete_cost_data' : 'unverified_cost_currency'),
         ], 'Finance report generated.', 'FINANCE_REPORT');
     }
     public function exportCsv(Request $request)
