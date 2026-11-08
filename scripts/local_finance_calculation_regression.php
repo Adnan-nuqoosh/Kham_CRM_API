@@ -113,7 +113,7 @@ try {
         [
             'order_id' => $orderId, 'sku' => 'FIN-B', 'name' => 'Test product B',
             'quantity' => 1, 'unit_price' => 80, 'line_total' => 80,
-            'unit_cost_snapshot' => null, 'created_at' => now(), 'updated_at' => now(),
+            'unit_cost_snapshot' => null, 'unit_cost_currency_code' => null, 'created_at' => now(), 'updated_at' => now(),
         ],
     ]);
     $missingItemId = DB::table('order_items')->where('order_id', $orderId)
