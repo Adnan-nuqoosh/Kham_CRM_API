@@ -102,7 +102,7 @@ try {
 
     // Laravel's Http::fake() registrations can retain earlier matching callbacks.
     // Swap in a fresh HTTP factory before each independent provider scenario.
-    Http::swap(new \\Illuminate\\Http\\Client\\Factory());
+    Http::swap(new \Illuminate\Http\Client\Factory());
     Http::preventStrayRequests();
     Http::fake([
         'apitest.myfatoorah.com/v3/payments' => Http::response([
