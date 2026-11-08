@@ -275,14 +275,18 @@ class ProductController extends Controller
         $variants = $request->input('variants', []);
         $hasPrices = false;
         $hasStocks = false;
+        $hasCostChanges = false;
 
         foreach (is_array($variants) ? $variants : [] as $variant) {
             $hasPrices = $hasPrices || !empty($variant['prices']);
             $hasStocks = $hasStocks || !empty($variant['stocks']);
+            $hasCostChanges = $hasCostChanges || array_key_exists('cost_price', $variant)
+                || array_key_exists('cost_currency_code', $variant);
         }
 
         abort_if($hasPrices && !$request->user()?->can('pricing.manage'), 403, 'Missing pricing.manage permission.');
         abort_if($hasStocks && !$request->user()?->can('inventory.manage'), 403, 'Missing inventory.manage permission.');
+        abort_if($hasCostChanges && !$request->user()?->can('finance.manage'), 403, 'Missing finance.manage permission.');
     }
 
     private function relations(): array
