@@ -20,5 +20,18 @@ class OrderService {
    return $order->load(['items','addresses','market.currency','warehouse','customer']);
   });
  }
- private function nextNumber():string { $prefix='KH-'.now()->format('Y').'-';$last=(int)(Order::query()->where('order_number','like',$prefix.'%')->max(DB::raw("CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)"))??0);return $prefix.str_pad((string)($last+1),6,'0',STR_PAD_LEFT); }
+ private function nextNumber():string {
+  // Called inside create()'s transaction. Lock one year row to serialize
+  // order-number allocation across simultaneous requests.
+  $year=(int)now()->format('Y');
+  DB::table('order_number_sequences')->insertOrIgnore([
+   'year'=>$year,'last_number'=>0,'created_at'=>now(),'updated_at'=>now(),
+  ]);
+  $sequence=DB::table('order_number_sequences')->where('year',$year)->lockForUpdate()->first();
+  $next=(int)$sequence->last_number+1;
+  DB::table('order_number_sequences')->where('year',$year)->update([
+   'last_number'=>$next,'updated_at'=>now(),
+  ]);
+  return 'KH-'.$year.'-'.str_pad((string)$next,6,'0',STR_PAD_LEFT);
+ }
 }
