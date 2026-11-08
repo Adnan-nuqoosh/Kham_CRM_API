@@ -60,6 +60,7 @@ class ProductStoreRequest extends FormRequest
             'variants.*.option_values' => ['nullable', 'array'],
             'variants.*.weight_grams' => ['nullable', 'integer', 'min:0'],
             'variants.*.cost_price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.cost_currency_code' => ['nullable', 'string', 'size:3', Rule::exists('currencies', 'code')->where('is_active', true)],
             'variants.*.is_active' => ['boolean'],
 
             'variants.*.prices' => ['sometimes', 'array'],
