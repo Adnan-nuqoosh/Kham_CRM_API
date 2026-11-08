@@ -136,9 +136,9 @@ try {
 
     $assert($send('PATCH', $costPath, ['unit_cost_snapshot' => -1])[0] === 422,
         'Negative item cost rejected');
-    [$costStatus, $costResult] = $send('PATCH', $costPath, ['unit_cost_snapshot' => 0.50]);
+    [$costStatus, $costResult] = $send('PATCH', $costPath, ['unit_cost_snapshot' => 0.50, 'unit_cost_currency_code' => 'AED']);
     $assert($costStatus === 200 && (float) ($costResult['data']['unit_cost_snapshot'] ?? -1) === 0.50,
-        'Finance manager can update existing item cost');
+        'Finance manager can update existing item cost with currency');
 
     $assert($send('GET', '/api/v1/finance/report')[0] === 422,
         'Finance report requires market filter');
