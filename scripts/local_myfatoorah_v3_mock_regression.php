@@ -100,6 +100,10 @@ try {
     $throws(fn () => $client->getPaymentDetails('../admin'),
         ValidationException::class, 'Unsafe payment ID rejected');
 
+    // Laravel's Http::fake() registrations can retain earlier matching callbacks.
+    // Swap in a fresh HTTP factory before each independent provider scenario.
+    Http::swap(new \\Illuminate\\Http\\Client\\Factory());
+    Http::preventStrayRequests();
     Http::fake([
         'apitest.myfatoorah.com/v3/payments' => Http::response([
             'IsSuccess' => false, 'Message' => 'Declined',
@@ -108,6 +112,8 @@ try {
     $throws(fn () => $client->createHostedPayment('115', $redirect, $key),
         RuntimeException::class, 'Provider error is not treated as success');
 
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::preventStrayRequests();
     Http::fake([
         'apitest.myfatoorah.com/v3/payments' => Http::response([
             'IsSuccess' => true, 'Data' => [
