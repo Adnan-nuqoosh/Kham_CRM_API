@@ -9,8 +9,8 @@ use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
 class OrderService {
  public function __construct(private PricingService $pricing,private CouponService $coupons,private InventoryService $inventory,private FulfillmentWarehouseResolver $warehouses,private ShippingQuoteService $shippingQuotes){}
- public function create(array $payload):Order {
-  return DB::transaction(function()use($payload){
+ public function create(array $payload, bool $allowLocalTestConfiguredShipping = false):Order {
+  return DB::transaction(function()use($payload,$allowLocalTestConfiguredShipping){
    $warehouse=$this->warehouses->forMarket((int)$payload['market_id']);
    $warehouseId=$warehouse->id;
    $lines=[];$subtotal=0;
@@ -21,7 +21,9 @@ class OrderService {
    $shipping=(float)($payload['shipping_total']??0);
    $tax=(float)($payload['tax_total']??0);
    if($mode==='configured'){
-    if(!config('commerce.configured_shipping_orders_enabled')){
+    if(!config('commerce.configured_shipping_orders_enabled')
+       && !($allowLocalTestConfiguredShipping && app()->environment('local')
+           && config('commerce.storefront_test_checkout_enabled', false))){
      throw ValidationException::withMessages(['shipping_mode'=>['Configured shipping orders are not enabled.']]);
     }
     if(array_key_exists('shipping_total',$payload)){
