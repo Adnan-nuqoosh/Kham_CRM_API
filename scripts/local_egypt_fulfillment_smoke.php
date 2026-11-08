@@ -120,6 +120,41 @@ try {
     $check((int) $state()->reserved === $initialReserved,
         'Egypt cancellation releases reserved stock');
 
+    // Negative-path tests: invalid inventory operations must never mutate balances.
+    $inventory = app(\App\Services\InventoryService::class);
+    $beforeNegative = $state();
+    $orderCount = DB::table('orders')->count();
+    try {
+        $create('AE', (int) $beforeNegative->on_hand - (int) $beforeNegative->reserved + 1);
+        throw new RuntimeException('Overselling was allowed');
+    } catch (ValidationException $e) {
+        $check(
+            DB::table('orders')->count() === $orderCount
+                && (int) $state()->on_hand === (int) $beforeNegative->on_hand
+                && (int) $state()->reserved === (int) $beforeNegative->reserved,
+            'Insufficient stock rejects order and rolls back its data'
+        );
+    }
+
+    try {
+        $inventory->release($variantId, $warehouse->id, 1);
+        throw new RuntimeException('Over-release was allowed');
+    } catch (ValidationException $e) {
+        $check((int) $state()->reserved === (int) $beforeNegative->reserved,
+            'Cannot release more than reserved stock');
+    }
+
+    try {
+        $inventory->commitSale($variantId, $warehouse->id, 1);
+        throw new RuntimeException('Unreserved shipment was allowed');
+    } catch (ValidationException $e) {
+        $check(
+            (int) $state()->on_hand === (int) $beforeNegative->on_hand
+                && (int) $state()->reserved === (int) $beforeNegative->reserved,
+            'Cannot ship without reservation or change stock'
+        );
+    }
+
     echo "ALL LOCAL SMOKE TESTS PASSED; rolling back all temporary changes.\n";
 } catch (Throwable $e) {
     $exitCode = 1;
