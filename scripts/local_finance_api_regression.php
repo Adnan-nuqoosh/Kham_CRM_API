@@ -203,11 +203,14 @@ $after = [
     'users' => DB::table('users')->count(),
     'expenses' => DB::table('finance_expenses')->count(),
     'orders' => DB::table('orders')->count(),
+    'order_items' => DB::table('order_items')->count(),
 ];
 if ($after !== $before) {
-    fwrite(STDERR, "FAIL: User, expense or order counts changed after rollback.\n");
+    fwrite(STDERR, "FAIL: Database row counts changed after rollback.\n");
+    fwrite(STDERR, 'Before: ' . json_encode($before, JSON_THROW_ON_ERROR) . PHP_EOL);
+    fwrite(STDERR, 'After:  ' . json_encode($after, JSON_THROW_ON_ERROR) . PHP_EOL);
     $exitCode = 1;
 } else {
-    echo "PASS: Original users, expenses and orders preserved after rollback\n";
+    echo "PASS: Original users, expenses, orders and order items preserved after rollback\n";
 }
 exit($exitCode);
