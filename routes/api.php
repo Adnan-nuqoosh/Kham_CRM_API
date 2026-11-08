@@ -17,8 +17,11 @@ use App\Http\Controllers\Api\V1\{
     FinanceReportController
 };
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/checkout/quote', PublicCheckoutQuoteController::class)
+        ->middleware('throttle:storefront-quote');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware('auth:sanctum')->group(function () {
