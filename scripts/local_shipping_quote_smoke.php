@@ -91,6 +91,14 @@ try {
     [$status] = $send('PATCH', '/api/v1/shipping-rules/' . $ruleId, ['is_active' => true]);
     verify($status === 200, 'CRM can activate approved shipping rule');
     [$status, $quote] = $send('POST', '/api/v1/checkout/quote', $payload);
+    if ($status !== 200) {
+        throw new RuntimeException('Checkout quote failed with HTTP ' . $status
+            . ': ' . json_encode([
+                'code' => $quote['code'] ?? null,
+                'message' => $quote['message'] ?? null,
+                'errors' => $quote['errors'] ?? null,
+            ], JSON_UNESCAPED_SLASHES));
+    }
     verify($status === 200 && ($quote['data']['currency_code'] ?? '') === 'AED'
         && (float) ($quote['data']['subtotal'] ?? 0) === 100.0
         && (float) ($quote['data']['shipping']['shipping_total'] ?? 0) === 15.0,
