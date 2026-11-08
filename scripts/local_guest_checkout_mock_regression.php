@@ -12,6 +12,8 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
 
 if (!app()->environment('local') || config('database.default') !== 'mysql'
     || !in_array(strtolower((string) config('database.connections.mysql.host')), ['localhost','127.0.0.1'], true)
@@ -23,10 +25,13 @@ $assert = static function (bool $ok, string $message): void {
     if (!$ok) throw new RuntimeException('FAIL: ' . $message);
     echo 'PASS: ' . $message . PHP_EOL;
 };
-$send = static function (array $body) use ($kernel): array {
+// Temporarily increase only the in-process test limiter so validation
+// assertions reach the controller; rate limiting is tested separately below.
+RateLimiter::for('storefront-test-order', fn (Request $r) => Limit::perMinute(100)->by($r->ip()));
+$send = static function (array $body, string $ip = '127.0.0.1') use ($kernel): array {
     $request = Request::create('http://localhost/api/v1/storefront/checkout/test-order',
         'POST', [], [], [], ['HTTP_ACCEPT'=>'application/json',
-        'CONTENT_TYPE'=>'application/json','REMOTE_ADDR'=>'127.0.0.1'],
+        'CONTENT_TYPE'=>'application/json','REMOTE_ADDR'=>$ip],
         json_encode($body, JSON_THROW_ON_ERROR));
     $response = $kernel->handle($request);
     try { return [$response->getStatusCode(), json_decode($response->getContent(), true)]; }
@@ -111,6 +116,17 @@ try {
     [$status]=$send($wrong);
     $assert($status===422,'Cross-market shipping rejected');
 
+    // Restore the actual 5/minute limit and verify the sixth request is
+    // throttled from a fresh test IP without creating another order.
+    RateLimiter::for('storefront-test-order', fn (Request $r) => Limit::perMinute(5)->by($r->ip()));
+    $testIp = '127.0.0.' . random_int(30, 230);
+    for ($i = 0; $i < 5; $i++) {
+        [$status] = $send($payload, $testIp);
+        $assert($status === 200, 'Allowed idempotent replay ' . ($i + 1) . ' under rate limit');
+    }
+    [$status] = $send($payload, $testIp);
+    $assert($status === 429, 'Sixth checkout attempt is rate-limited');
+
     $assert(DB::table('orders')->count()===$before['orders']+1
         && DB::table('payments')->count()===$before['payments']+1,
         'Rejected requests did not create extra orders or payments');
@@ -120,6 +136,7 @@ try {
 } finally {
     DB::rollBack();
     config(['commerce.storefront_test_checkout_enabled'=>false]);
+    RateLimiter::for('storefront-test-order', fn (Request $r) => Limit::perMinute(5)->by($r->ip()));
 }
 if ($before!==$counts()) {
     fwrite(STDERR,"FAIL: Row counts differ after rollback.\n"); $exit=1;
