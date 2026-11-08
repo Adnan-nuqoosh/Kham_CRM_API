@@ -62,6 +62,7 @@ $before = [
     'users' => DB::table('users')->count(),
     'expenses' => DB::table('finance_expenses')->count(),
     'orders' => DB::table('orders')->count(),
+    'order_items' => DB::table('order_items')->count(),
 ];
 $exitCode = 0;
 
@@ -73,6 +74,39 @@ try {
         'password' => Str::random(48),
     ]);
     Sanctum::actingAs($user, ['*']);
+
+    // Use a real persisted order item: Laravel resolves route model bindings
+    // before the permission middleware, so a nonexistent ID returns 404.
+    $warehouseId = DB::table('warehouses')->where('code', 'EG-01')->value('id');
+    $assert($warehouseId !== null, 'Egypt warehouse available for test fixture');
+    $orderId = DB::table('orders')->insertGetId([
+        'order_number' => 'FIN-QA-' . Str::upper(Str::random(18)),
+        'market_id' => $market->id,
+        'warehouse_id' => $warehouseId,
+        'currency_code' => 'AED',
+        'status' => 'pending',
+        'payment_status' => 'pending',
+        'fulfillment_status' => 'unfulfilled',
+        'subtotal' => 1,
+        'discount_total' => 0,
+        'shipping_total' => 0,
+        'tax_total' => 0,
+        'grand_total' => 1,
+        'placed_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $itemId = DB::table('order_items')->insertGetId([
+        'order_id' => $orderId,
+        'sku' => 'FINANCE-QA',
+        'name' => 'Temporary finance permission fixture',
+        'quantity' => 1,
+        'unit_price' => 1,
+        'line_total' => 1,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    $costPath = '/api/v1/finance/order-items/' . $itemId . '/cost';
 
     $reportPath = '/api/v1/finance/report?period=daily&market_id=' . $market->id;
     $expensePath = '/api/v1/finance/expenses';
@@ -92,11 +126,19 @@ try {
         'View-only user can list expenses');
     $assert($send('POST', $expensePath, [])[0] === 403,
         'View-only user cannot create expenses');
-    $assert($send('PATCH', '/api/v1/finance/order-items/1/cost', ['unit_cost_snapshot' => 1])[0] === 403,
-        'View-only user cannot modify item cost');
+    $assert($send('PATCH', $costPath, ['unit_cost_snapshot' => 1])[0] === 403,
+        'View-only user cannot modify existing item cost');
+    $assert(DB::table('order_items')->where('id', $itemId)->value('unit_cost_snapshot') === null,
+        'Denied cost update did not mutate the item');
 
     $user->givePermissionTo('finance.manage');
     $user->unsetRelation('permissions');
+
+    $assert($send('PATCH', $costPath, ['unit_cost_snapshot' => -1])[0] === 422,
+        'Negative item cost rejected');
+    [$costStatus, $costResult] = $send('PATCH', $costPath, ['unit_cost_snapshot' => 0.50]);
+    $assert($costStatus === 200 && (float) ($costResult['data']['unit_cost_snapshot'] ?? -1) === 0.50,
+        'Finance manager can update existing item cost');
 
     $assert($send('GET', '/api/v1/finance/report')[0] === 422,
         'Finance report requires market filter');
