@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\{
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\MarketTaxRuleController;
+use App\Http\Controllers\Api\V1\OrderRefundRequestController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahWebhookController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
@@ -150,6 +151,13 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:finance.manage');
         Route::patch('/finance/order-items/{item}/cost', [FinanceExpenseController::class, 'setItemCost'])
             ->middleware('permission:finance.manage');
+
+        Route::get('/orders/{order}/refund-requests', [OrderRefundRequestController::class, 'index'])
+            ->middleware('permission:orders.view');
+        Route::post('/orders/{order}/refund-requests', [OrderRefundRequestController::class, 'store'])
+            ->middleware('permission:orders.manage');
+        Route::post('/refund-requests/{refund}/approve', [OrderRefundRequestController::class, 'approve'])
+            ->middleware('permission:refunds.approve');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
