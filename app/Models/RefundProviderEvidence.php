@@ -32,7 +32,7 @@ class RefundProviderEvidence extends Model
             ]);
         }
 
-        return self::query()->create([
+        $evidence = (new self())->forceFill([
             'refund_request_id' => $refund->id,
             'provider' => $provider,
             'provider_refund_reference' => $reference,
@@ -41,5 +41,7 @@ class RefundProviderEvidence extends Model
             'verification_status' => 'unverified',
             'verification_source' => 'pending_provider_integration',
         ]);
+        $evidence->save();
+        return $evidence;
     }
 }
