@@ -14,6 +14,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 use App\Models\Customer;
 use App\Models\Market;
 use App\Models\Order;
@@ -141,6 +142,74 @@ try {
         && data_get($inspectionData, 'data.safe_to_retry') === false
         && $order->payments()->count() === 1,
         'Read-only reservation inspection exposes stored attempt without provider call');
+
+    // Provider enquiry is read-only, even when the gateway reports PAID.
+    $enquire = static function (Order $target, string $paymentId) use ($app): array {
+        $request = Request::create('/api/v1/orders/' . $target->id
+            . '/payments/myfatoorah/sandbox-hosted/provider-enquiry',
+            'POST', ['payment_id' => $paymentId], [], [],
+            ['HTTP_ACCEPT' => 'application/json']);
+        $app->instance('request', $request);
+        $response = $app->make(LocalMyFatoorahProviderEnquiryController::class)(
+            $request, $target, $app->make(MyFatoorahV3Client::class));
+        return [$response->getStatusCode(), $response->getData(true)];
+    };
+    $providerPaymentId = (string) random_int(100000000, 999999999);
+    $providerDetails = [
+        'Invoice' => ['Id' => $invoice, 'ExternalIdentifier' => $order->order_number,
+            'Status' => 'PAID'],
+        'Transaction' => ['PaymentId' => $providerPaymentId, 'Status' => 'SUCCESS'],
+        'Amount' => ['DisplayCurrency' => $order->currency_code,
+            'ValueInDisplayCurrency' => (string) $order->grand_total],
+    ];
+    $fakeEnquiry = static function (array $details): void {
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::fake(['apitest.myfatoorah.com/v3/payments/*' =>
+            Http::response(['IsSuccess' => true, 'Data' => $details], 200)]);
+        Http::preventStrayRequests();
+    };
+    $fakeEnquiry($providerDetails);
+    [$enquiryStatus, $enquiryBody] = $enquire($order, $providerPaymentId);
+    $assert($enquiryStatus === 200
+        && data_get($enquiryBody, 'code') === 'SANDBOX_PROVIDER_ENQUIRY_MATCHED'
+        && data_get($enquiryBody, 'data.provider_reports_paid') === true
+        && data_get($enquiryBody, 'data.payment_settled') === false
+        && $order->fresh()->payment_status === PaymentStatus::Pending
+        && $order->payments()->sole()->status === PaymentStatus::Pending->value,
+        'Provider paid enquiry matches invoice without settling order or payment');
+
+    $wrongDetails = $providerDetails;
+    $wrongDetails['Invoice']['ExternalIdentifier'] = 'wrong-order-reference';
+    $fakeEnquiry($wrongDetails);
+    try {
+        $enquire($order, $providerPaymentId);
+        throw new RuntimeException('FAIL: Provider enquiry accepted wrong order reference');
+    } catch (ValidationException $e) {
+        $assert($order->fresh()->payment_status === PaymentStatus::Pending
+            && $order->payments()->sole()->status === PaymentStatus::Pending->value,
+            'Provider enquiry rejects mismatched order reference without mutation');
+    }
+
+    $wrongDetails = $providerDetails;
+    $wrongDetails['Amount']['ValueInDisplayCurrency'] = '99999.0000';
+    $fakeEnquiry($wrongDetails);
+    try {
+        $enquire($order, $providerPaymentId);
+        throw new RuntimeException('FAIL: Provider enquiry accepted wrong amount');
+    } catch (ValidationException $e) {
+        $assert($order->fresh()->payment_status === PaymentStatus::Pending,
+            'Provider enquiry rejects mismatched amount without settlement');
+    }
+
+    $fakeEnquiry($providerDetails);
+    $unlinkedOrder = $newOrder();
+    try {
+        $enquire($unlinkedOrder, $providerPaymentId);
+        throw new RuntimeException('FAIL: Provider enquiry accepted missing reservation');
+    } catch (ValidationException $e) {
+        $assert($unlinkedOrder->payments()->count() === 0,
+            'Provider enquiry refuses missing persisted invoice');
+    }
 
     $sameKeyOrder = $newOrder();
     $sameKey = 'sandbox_' . Str::random(24);
