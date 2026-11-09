@@ -93,7 +93,7 @@ class PublicCheckoutQuoteController extends Controller
             round($subtotal, 4)
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
-        $taxReadiness = app(MarketTaxQuoteService::class)->readiness($market);
+        $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($subtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
 
         // The public response does not expose internal shipping-rule identifiers.
         unset($shippingQuote['rule_id']);
@@ -107,8 +107,9 @@ class PublicCheckoutQuoteController extends Controller
             'shipping' => $shippingQuote,
             'total_before_tax' => number_format($subtotal + $shippingTotal, 4, '.', ''),
             'tax_status' => $taxReadiness['tax_status'],
+            'tax_total' => $taxReadiness['tax_total'],
             'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
-        ], 'Provisional quote only; tax and final payable amount are not configured.', 'STOREFRONT_QUOTE')
+        ], 'Provisional quote only; tax preview is non-binding and final payable remains disabled.', 'STOREFRONT_QUOTE')
             ->header('Cache-Control', 'no-store');
     }
 }
