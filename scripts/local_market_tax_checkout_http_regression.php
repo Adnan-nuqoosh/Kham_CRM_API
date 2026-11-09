@@ -67,20 +67,21 @@ $payload = [
         ['shipping_fee'=>20,'free_shipping_threshold'=>null,'is_active'=>true]);
     MarketTaxRule::where('market_id',$market->id)->delete();
     [$status,$body] = $call('storefront/checkout/quote',$payload);
-    $check($status===200 && ($body['data']['tax_total']??'missing')===null
+    if ($status !== 200) echo 'DIAGNOSTIC public quote HTTP ' . $status . ': ' . json_encode($body) . PHP_EOL;
+    $check($status===200 && array_key_exists('tax_total', $body['data'] ?? []) && $body['data']['tax_total'] === null
         && ($body['data']['is_final_payable_total']??null)===false,
         'public quote unconfigured tax remains non-payable');
     $rule = MarketTaxRule::create(['market_id'=>$market->id,'rate_percent'=>10,
         'calculation_method'=>'exclusive','tax_shipping'=>false]);
     [$status,$body] = $call('storefront/checkout/quote',$payload);
-    $check($status===200 && ($body['data']['tax_total']??'missing')===null
+    $check($status===200 && array_key_exists('tax_total', $body['data'] ?? []) && $body['data']['tax_total'] === null
         && ($body['data']['tax_status']??null)==='pending_approval',
         'public quote unapproved tax withheld');
     $user = User::query()->get()->first(fn ($u)=>$u->can('orders.manage'));
     if (!$user) throw new RuntimeException('STOP: Existing orders.manage user required for CRM HTTP checks.');
     Sanctum::actingAs($user,['*']);
     [$status,$body] = $call('checkout/quote',$payload);
-    $check($status===200 && ($body['data']['tax_total']??'missing')===null
+    $check($status===200 && array_key_exists('tax_total', $body['data'] ?? []) && $body['data']['tax_total'] === null
         && ($body['data']['is_final_payable_total']??null)===false,
         'CRM quote unapproved tax withheld');
     $rule->forceFill(['is_approved'=>true,'approved_at'=>now(),'approved_by'=>$user->id])->save();
