@@ -111,5 +111,51 @@ try {
                 'payment ledger '.$ledgerStatus.' blocks stale-order cancellation');
         }
     }
+    // HTTP authorization: unauthorized actors must not transition orders or mutate stock.
+    $kernel = app(\Illuminate\Contracts\Http\Kernel::class);
+    $http = static function (string $method, string $path, array $body = []) use ($kernel): int {
+        $request = \Illuminate\Http\Request::create('/api/v1/'.$path,$method,$body,[],[],
+            ['HTTP_ACCEPT'=>'application/json']);
+        $response = $kernel->handle($request);
+        try { return $response->getStatusCode(); }
+        finally { $kernel->terminate($request,$response); }
+    };
+    $securedOrder = $orders->create($payload);
+    $reservedBefore = (int)$stock->fresh()->reserved;
+    $path = 'orders/'.$securedOrder->id.'/status';
+    $check($http('PATCH',$path,['status'=>'cancelled'])===401
+        && $securedOrder->fresh()->status===OrderStatus::Pending
+        && (int)$stock->fresh()->reserved===$reservedBefore,
+        'anonymous status mutation rejected without inventory changes');
+    $viewer = \App\Models\User::create(['name'=>'Order permission tester',
+        'email'=>'order-viewer-'.\Illuminate\Support\Str::random(14).'@example.invalid',
+        'password'=>\Illuminate\Support\Str::random(48)]);
+    $viewer->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate([
+        'name'=>'orders.view','guard_name'=>'web']));
+    \Laravel\Sanctum\Sanctum::actingAs($viewer,['*']);
+    $check($http('PATCH',$path,['status'=>'cancelled'])===403
+        && $securedOrder->fresh()->status===OrderStatus::Pending
+        && (int)$stock->fresh()->reserved===$reservedBefore,
+        'read-only user cannot cancel order or release stock');
+    $check($http('PATCH',$path,['status'=>'shipped'])===403
+        && $securedOrder->fresh()->status===OrderStatus::Pending
+        && (int)$stock->fresh()->reserved===$reservedBefore,
+        'read-only user cannot ship order or deduct stock');
+    $manager = \App\Models\User::create(['name'=>'Order status manager',
+        'email'=>'order-manager-'.\Illuminate\Support\Str::random(14).'@example.invalid',
+        'password'=>\Illuminate\Support\Str::random(48)]);
+    $manager->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate([
+        'name'=>'orders.manage','guard_name'=>'web']));
+    \Laravel\Sanctum\Sanctum::actingAs($manager,['*']);
+    $check($http('PATCH',$path,['status'=>'invalid'])===422
+        && $securedOrder->fresh()->status===OrderStatus::Pending,
+        'manager invalid status rejected');
+    $check($http('PATCH',$path,['status'=>'cancelled'])===200
+        && $securedOrder->fresh()->status===OrderStatus::Cancelled
+        && (int)$stock->fresh()->reserved===$reservedBefore-2,
+        'authorized manager cancellation releases reservation once');
+    $check($http('PATCH',$path,['status'=>'cancelled'])===200
+        && (int)$stock->fresh()->reserved===$reservedBefore-2,
+        'replayed authorized cancellation cannot double-release inventory');
     echo "ALL ORDER LIFECYCLE CHECKS PASSED (rolled back)\n";
 } finally { DB::rollBack(); }
