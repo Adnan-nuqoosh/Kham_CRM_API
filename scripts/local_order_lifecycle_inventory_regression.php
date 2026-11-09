@@ -94,5 +94,22 @@ try {
                 'cancellation blocked for '.$paymentState->value.' without releasing inventory');
         }
     }
+    foreach (['authorized','paid','partially_refunded','refunded'] as $ledgerStatus) {
+        $staleOrder = $orders->create($payload);
+        \App\Models\Payment::create([
+            'order_id'=>$staleOrder->id,'provider'=>'local-regression',
+            'method'=>'test','status'=>$ledgerStatus,'amount'=>$staleOrder->grand_total,
+            'currency_code'=>$staleOrder->currency_code,
+        ]);
+        $beforeReserved = (int)$stock->fresh()->reserved;
+        try {
+            $statuses->transition($staleOrder,OrderStatus::Cancelled);
+            throw new RuntimeException('FAIL: stale order cancelled with '.$ledgerStatus.' ledger');
+        } catch (ValidationException $e) {
+            $check($staleOrder->fresh()->status===OrderStatus::Pending
+                && (int)$stock->fresh()->reserved===$beforeReserved,
+                'payment ledger '.$ledgerStatus.' blocks stale-order cancellation');
+        }
+    }
     echo "ALL ORDER LIFECYCLE CHECKS PASSED (rolled back)\n";
 } finally { DB::rollBack(); }
