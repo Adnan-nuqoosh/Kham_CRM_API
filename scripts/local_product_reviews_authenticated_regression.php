@@ -56,7 +56,9 @@ try{
  Sanctum::actingAs($user,['*']);
  [$status,$body]=$call('POST','product-reviews',['order_item_id'=>$item->id,'rating'=>5]);
  $check($status===403,'viewer cannot submit reviews',[$status,$body]);
- [$status,$body]=$call('PATCH','product-reviews/999999999/moderate',['status'=>'approved']);
+ $permissionProbe=ProductReview::create(['product_id'=>$product->id,'rating'=>3,
+  'reviewer_name'=>'Permission Probe','verified_purchase'=>false,'status'=>'pending']);
+ [$status,$body]=$call('PATCH','product-reviews/'.$permissionProbe->id.'/moderate',['status'=>'approved']);
  $check($status===403,'viewer cannot moderate reviews',[$status,$body]);
  $user->givePermissionTo($manage);
  app(PermissionRegistrar::class)->forgetCachedPermissions();
