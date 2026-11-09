@@ -49,6 +49,13 @@ class OrderService {
    $shippingRuleId=null;
    $shipping=(float)($payload['shipping_total']??0);
    $tax=(float)($payload['tax_total']??0);
+   foreach (['shipping_total', 'tax_total'] as $field) {
+    if (!array_key_exists($field, $payload) || $payload[$field] === null) continue;
+    if (!is_numeric($payload[$field]) || !is_finite((float)$payload[$field])
+        || (float)$payload[$field] < 0 || (float)$payload[$field] > 999999999) {
+     throw ValidationException::withMessages([$field=>['Amount must be a finite non-negative number within allowed limits.']]);
+    }
+   }
    if($mode==='configured'){
     if(!config('commerce.configured_shipping_orders_enabled')
        && !($allowLocalTestConfiguredShipping && app()->environment('local')
