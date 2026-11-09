@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/community', \App\Http\Controllers\Api\V1\PublicCommunityController::class)->middleware('throttle:storefront-quote');
     Route::get('/storefront/homepage', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
     Route::post('/storefront/partners/apply', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'store'])->middleware('throttle:login');
     Route::post('/storefront/newsletter/subscribe', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'subscribe'])->middleware('throttle:login');
