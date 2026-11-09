@@ -46,7 +46,7 @@ try {
         throw new RuntimeException('STOP: An existing active catalog variant is required; no fixture created.');
     }
     $variant = $variant->replicate();
-    $variant->sku = 'TAX-HTTP-' . \\Illuminate\\Support\\Str::upper(\\Illuminate\\Support\\Str::random(12));
+    $variant->sku = 'TAX-HTTP-' . \Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(12));
     $variant->is_active = true;
     $variant->save();
     ProductMarketPrice::create([
