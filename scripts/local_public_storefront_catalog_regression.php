@@ -56,6 +56,23 @@ try{
     [$status,$detail]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=en');
     $check($status===200&&($detail['data']['name']??null)==='English Fixture',
         'guest English product detail works');
+    $warehouse=app(\App\Services\FulfillmentWarehouseResolver::class)->forMarket((int)$market->id);
+    \App\Models\InventoryStock::updateOrCreate(
+        ['variant_id'=>$variant->id,'warehouse_id'=>$warehouse->id],
+        ['on_hand'=>5,'reserved'=>2,'damaged'=>1,'reorder_level'=>0]
+    );
+    [$status,$stocked]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===200&&($stocked['data']['variants'][0]['in_stock']??null)===true,
+        'public catalog shows available stock as boolean');
+    $check(!array_key_exists('on_hand',$stocked['data']['variants'][0])
+        &&!array_key_exists('reserved',$stocked['data']['variants'][0])
+        &&!array_key_exists('warehouse_id',$stocked['data']['variants'][0]),
+        'public stock response hides warehouse and quantities');
+    \App\Models\InventoryStock::where('variant_id',$variant->id)
+        ->where('warehouse_id',$warehouse->id)->update(['reserved'=>4]);
+    [$status,$soldOut]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===200&&($soldOut['data']['variants'][0]['in_stock']??null)===false,
+        'reserved and damaged quantities can make public variant out of stock');
     $product->forceFill(['status'=>\App\Enums\ProductStatus::Draft])->save();
     [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
     $check($status===404,'draft product detail hidden from guests');
