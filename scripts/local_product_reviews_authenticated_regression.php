@@ -76,7 +76,13 @@ try{
  [$status,$body]=$call('POST','product-reviews',['order_item_id'=>$item->id,'rating'=>4]);
  $check($status===422,'duplicate order-item review rejected',[$status,$body]);
  [$status,$body]=$call('GET','product-reviews?status=pending&product_id='.$product->id);
- $check($status===200&&($body['data']['total']??null)===1,'CRM pending review filter',[$status,$body]);
+ $pendingRows=$body['data']['data']??[];
+ $check($status===200&&($body['data']['total']??null)===2
+  &&count($pendingRows)===2
+  &&count(array_filter($pendingRows,static fn($row)=>($row['status']??null)==='pending'
+    &&($row['product_id']??null)===$product->id))===2
+  &&in_array($reviewId,array_column($pendingRows,'id'),true),
+  'CRM pending review filter',[$status,$body]);
  [$status,$body]=$call('PATCH','product-reviews/'.$reviewId.'/moderate',['status'=>'pending']);
  $check($status===422,'moderation rejects invalid status',[$status,$body]);
  [$status,$body]=$call('PATCH','product-reviews/'.$reviewId.'/moderate',['status'=>'approved']);
