@@ -70,8 +70,9 @@ $invoke = static function (Order $order, array $body = []) use ($app): array {
     $request = Request::create('/api/v1/orders/' . $order->id
         . '/payments/myfatoorah/sandbox-hosted', 'POST', $body, [], [],
         ['HTTP_ACCEPT' => 'application/json']);
-    $request->setContainer($app);
-    $request->setRedirector($app->make('redirect'));
+    // Laravel 12 Request does not expose setContainer/setRedirector.
+    // Validation resolves through the framework's request container binding.
+    $app->instance('request', $request);
     $response = $app->make(LocalMyFatoorahHostedCheckoutController::class)(
         $request, $order, $app->make(MyFatoorahV3Client::class));
     return [$response->getStatusCode(), $response->getData(true)];
