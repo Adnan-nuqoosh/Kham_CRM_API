@@ -12,6 +12,7 @@ use App\Services\PricingService;
 use App\Services\ShippingQuoteService;
 use App\Services\MarketTaxQuoteService;
 use App\Support\ApiResponse;
+use App\Support\StorefrontLocale;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -99,6 +100,7 @@ class PublicCheckoutQuoteController extends Controller
         unset($shippingQuote['rule_id']);
 
         return ApiResponse::success([
+            'locale' => StorefrontLocale::resolve($request),
             'market_id' => $market->id,
             'currency_code' => $market->currency->code,
             'subtotal' => number_format($subtotal, 4, '.', ''),
