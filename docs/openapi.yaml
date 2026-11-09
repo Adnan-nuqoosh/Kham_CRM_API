@@ -178,12 +178,23 @@ paths:
         '429': {description: Rate limit exceeded}
   /api/v1/storefront/newsletter/unsubscribe:
     post:
-      tags: ['storefront']
-      summary: 'POST /storefront/newsletter/unsubscribe'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Newsletter]
+      summary: Process unsubscribe token without disclosing subscription status
+      description: Returns the same success envelope whether or not the token matches an active subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string, minLength: 64, maxLength: 64}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: NEWSLETTER_UNSUBSCRIBE_RECEIVED; data is null}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded}
+
   /api/v1/storefront/products/{product}/reviews:
     parameters:
       - in: path
@@ -1467,7 +1478,7 @@ components:
         sort_order: {type: integer}
     HomepageSectionInput:
       type: object
-      description: All fields required for creation are key, type, title_en; PATCH accepts partial fields.
+      description: POST requires key, type and title_en; PATCH accepts a subset.
       properties:
         key: {type: string, maxLength: 100, pattern: '^[a-z0-9][a-z0-9_-]*$'}
         type: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
