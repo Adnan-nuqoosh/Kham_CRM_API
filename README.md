@@ -1,9 +1,5 @@
 # KHAM Commerce OS — Backend API
 
-**Developer:** Adnan Yousaf
-
-**Project:** KHAM CRM API
-
 API-first Laravel 12 backend for a multi-market commerce operation. The frontend/admin panel can be replaced later without moving business logic out of the backend.
 
 ## Included in Build 1
