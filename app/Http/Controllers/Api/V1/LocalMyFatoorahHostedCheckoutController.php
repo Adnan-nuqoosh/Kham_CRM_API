@@ -132,6 +132,28 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
         try {
             $result = DB::transaction(function () use ($order, $response, $keyHash, $reservation): array {
                 $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+                // The order may have been cancelled or paid while the external
+                // provider call was in flight. Never attach a new payment then.
+                if ($locked->payment_status !== PaymentStatus::Pending
+                    || in_array($locked->status->value, ['cancelled', 'returned'], true)
+                    || (float) $locked->grand_total <= 0
+                    || $locked->payments()->exists()) {
+                    throw ValidationException::withMessages([
+                        'payment' => ['Order changed during hosted initiation. Reconcile provider result manually.'],
+                    ]);
+                }
+                $stored = DB::table('myfatoorah_checkout_reservations')
+                    ->where('id', $reservation['reservation_id'])
+                    ->lockForUpdate()->first();
+                if (!$stored || $stored->status !== 'requesting'
+                    || (string) $stored->order_id !== (string) $locked->id
+                    || !hash_equals((string) $stored->idempotency_key_hash, $keyHash)
+                    || bccomp((string) $stored->amount, (string) $locked->grand_total, 4) !== 0
+                    || (string) $stored->currency_code !== (string) $locked->currency_code) {
+                    throw ValidationException::withMessages([
+                        'payment' => ['Hosted reservation or order totals changed. Manual reconciliation required.'],
+                    ]);
+                }
             // Fail closed if the provider invoice is already linked to another attempt.
             // A database uniqueness constraint is still required for cross-order races.
             if (DB::table('payments')->where('provider', 'myfatoorah')
