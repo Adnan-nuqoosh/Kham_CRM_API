@@ -261,6 +261,7 @@ class CatalogController extends Controller
             $search = trim((string) $request->search);
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('name_ar', 'like', "%{$search}%")
                 ->orWhere('slug', 'like', "%{$search}%")
             );
         }
