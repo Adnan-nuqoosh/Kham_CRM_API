@@ -47,7 +47,7 @@ paths:
           name: type
           schema: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
       responses:
-        '200': {description: Paginated section listing}
+        '200': {description: 'Paginated section listing'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
@@ -60,7 +60,7 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/HomepageSectionInput'}
       responses:
-        '201': {description: Section created}
+        '201': {description: 'Section created'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -80,20 +80,20 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/HomepageSectionInput'}
       responses:
-        '200': {description: Section updated}
+        '200': {description: 'Section updated'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {description: Section not found}
+        '404': {description: 'Section not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Homepage]
       summary: Delete homepage section (products.manage)
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Section deleted}
+        '200': {description: 'Section deleted'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {description: Section not found}
+        '404': {description: 'Section not found'}
   /api/v1/storefront/partners/apply:
     post:
       tags: [Partners]
@@ -107,7 +107,7 @@ paths:
         '201':
           description: Application accepted; no applicant PII returned
         '422': {$ref: '#/components/responses/ValidationError'}
-        '429': {description: Rate limit exceeded}
+        '429': {description: 'Rate limit exceeded'}
   /api/v1/partner-applications:
     get:
       tags: [Partners]
@@ -121,7 +121,7 @@ paths:
           name: partner_type
           schema: {type: string, enum: [retailer, distributor, influencer, corporate, other]}
       responses:
-        '200': {description: Paginated applications including applicant PII; CRM only}
+        '200': {description: 'Paginated applications including applicant PII; CRM only'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/partner-applications/{application}:
@@ -135,10 +135,10 @@ paths:
       summary: CRM application detail (customers.view)
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Application details; CRM only}
+        '200': {description: 'Application details; CRM only'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {description: Application not found}
+        '404': {description: 'Application not found'}
     patch:
       tags: [Partners]
       summary: Review application (customers.manage)
@@ -154,10 +154,10 @@ paths:
                 status: {type: string, enum: [pending, in_review, approved, rejected]}
                 internal_notes: {type: string, nullable: true, maxLength: 5000}
       responses:
-        '200': {description: Updated application with reviewer metadata}
+        '200': {description: 'Updated application with reviewer metadata'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {description: Application not found}
+        '404': {description: 'Application not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /api/v1/storefront/newsletter/subscribe:
     post:
@@ -173,9 +173,9 @@ paths:
               properties:
                 email: {type: string, format: email, maxLength: 255}
       responses:
-        '200': {description: Subscription request processed}
+        '200': {description: 'Subscription request processed'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '429': {description: Rate limit exceeded}
+        '429': {description: 'Rate limit exceeded'}
   /api/v1/storefront/newsletter/unsubscribe:
     post:
       tags: [Newsletter]
@@ -191,9 +191,9 @@ paths:
               properties:
                 token: {type: string, minLength: 64, maxLength: 64}
       responses:
-        '200': {description: NEWSLETTER_UNSUBSCRIBE_RECEIVED; data is null}
+        '200': {description: 'NEWSLETTER_UNSUBSCRIBE_RECEIVED; data is null'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '429': {description: Rate limit exceeded}
+        '429': {description: 'Rate limit exceeded'}
 
   /api/v1/storefront/products/{product}/reviews:
     parameters:
@@ -212,8 +212,8 @@ paths:
           name: per_page
           schema: {type: integer, minimum: 1, maximum: 50, default: 10}
       responses:
-        '200': {description: PRODUCT_REVIEWS; data has reviews, review_count and average_rating}
-        '404': {description: Product inactive or not found}
+        '200': {description: 'PRODUCT_REVIEWS; data has reviews, review_count and average_rating'}
+        '404': {description: 'Product inactive or not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/ritual-quiz/questions:
@@ -234,8 +234,8 @@ paths:
             schema:
               type: object
               properties:
-                market_id: {description: Validated by controller}
-                option_ids: {description: Validated by controller}
+                market_id: {description: 'Validated by controller'}
+                option_ids: {description: 'Validated by controller'}
       responses:
         '200': {description: 'RITUAL_RECOMMENDATIONS'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -249,7 +249,7 @@ paths:
           name: search
           schema: {type: string, maxLength: 120}
       responses:
-        '200': {description: STOREFRONT_INGREDIENTS; paginated active ingredient list}
+        '200': {description: 'STOREFRONT_INGREDIENTS; paginated active ingredient list'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/ingredients/{slug}:
@@ -262,15 +262,15 @@ paths:
       tags: [Storefront Ingredients]
       summary: Get an active ingredient by slug
       responses:
-        '200': {description: STOREFRONT_INGREDIENT; localized id, slug, name, description}
-        '404': {description: Ingredient not found or inactive}
+        '200': {description: 'STOREFRONT_INGREDIENT; localized id, slug, name, description'}
+        '404': {description: 'Ingredient not found or inactive'}
 
   /api/v1/storefront/rituals:
     get:
       tags: [Storefront Rituals]
       summary: Paginated published rituals with localized content
       responses:
-        '200': {description: STOREFRONT_RITUALS; published rituals ordered by sort_order and id}
+        '200': {description: 'STOREFRONT_RITUALS; published rituals ordered by sort_order and id'}
 
   /api/v1/storefront/rituals/{slug}:
     parameters:
@@ -282,8 +282,8 @@ paths:
       tags: [Storefront Rituals]
       summary: Published ritual detail including localized steps and active products
       responses:
-        '200': {description: STOREFRONT_RITUAL; ritual fields plus steps and products}
-        '404': {description: Ritual not found or unpublished}
+        '200': {description: 'STOREFRONT_RITUAL; ritual fields plus steps and products'}
+        '404': {description: 'Ritual not found or unpublished'}
 
   /api/v1/storefront/brands:
     get:
@@ -297,7 +297,7 @@ paths:
           name: page
           schema: {type: integer, minimum: 1}
       responses:
-        '200': {description: STOREFRONT_BRANDS; localized brand list with pagination meta}
+        '200': {description: 'STOREFRONT_BRANDS; localized brand list with pagination meta'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/brands/{slug}:
@@ -315,8 +315,8 @@ paths:
           required: true
           schema: {type: integer}
       responses:
-        '200': {description: STOREFRONT_BRAND; data contains brand and products arrays}
-        '404': {description: Active brand not found}
+        '200': {description: 'STOREFRONT_BRAND; data contains brand and products arrays'}
+        '404': {description: 'Active brand not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/products:
@@ -439,7 +439,7 @@ paths:
                           title: {type: string}
                           price: {type: string, nullable: true}
                           in_stock: {type: boolean}
-        '404': {description: Product not found or unavailable for market}
+        '404': {description: 'Product not found or unavailable for market'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/payments/myfatoorah/local-webhook:
@@ -450,9 +450,9 @@ paths:
       responses:
         '200': {description: 'SANDBOX_PAYMENT_VERIFIED'}
         '202': {description: 'PAYMENT_NOT_CONFIRMED'}
-        '404': {description: Endpoint disabled or order not found}
+        '404': {description: 'Endpoint disabled or order not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '400': {description: INVALID_WEBHOOK_BODY; invalid JSON or payload exceeds 64 KiB}
+        '400': {description: 'INVALID_WEBHOOK_BODY; invalid JSON or payload exceeds 64 KiB'}
 
   /api/v1/storefront/checkout/test-order:
     post:
@@ -475,7 +475,7 @@ paths:
       responses:
         '201': {description: 'MOCK_CHECKOUT_ORDER'}
         '200': {description: 'Idempotent replay'}
-        '404': {description: Endpoint disabled or order not found}
+        '404': {description: 'Endpoint disabled or order not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/checkout/quote:
@@ -545,10 +545,10 @@ paths:
               properties:
                 email: {type: string, format: email, maxLength: 255}
       responses:
-        '200': {description: AUTH_RESET_REQUESTED; same public response for known and unknown emails}
+        '200': {description: 'AUTH_RESET_REQUESTED; same public response for known and unknown emails'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '429': {description: Rate limit exceeded}
-        '503': {description: AUTH_RESET_UNAVAILABLE; secure frontend reset URL not configured}
+        '429': {description: 'Rate limit exceeded'}
+        '503': {description: 'AUTH_RESET_UNAVAILABLE; secure frontend reset URL not configured'}
 
   /api/v1/auth/reset-password:
     post:
@@ -567,9 +567,9 @@ paths:
                 password: {type: string, minLength: 12}
                 password_confirmation: {type: string, minLength: 12}
       responses:
-        '200': {description: AUTH_RESET_COMPLETE}
-        '422': {description: Invalid or expired token, mismatched confirmation or invalid input}
-        '429': {description: Rate limit exceeded}
+        '200': {description: 'AUTH_RESET_COMPLETE'}
+        '422': {description: 'Invalid or expired token, mismatched confirmation or invalid input'}
+        '429': {description: 'Rate limit exceeded'}
 
   /api/v1/auth/login:
     post:
@@ -587,10 +587,10 @@ paths:
                 password: {type: string}
                 device_name: {type: string, nullable: true, maxLength: 100}
       responses:
-        '200': {description: AUTH_LOGIN; data contains token, token_type and user with roles.permissions}
-        '401': {description: AUTH_INVALID; invalid email or password}
+        '200': {description: 'AUTH_LOGIN; data contains token, token_type and user with roles.permissions'}
+        '401': {description: 'AUTH_INVALID; invalid email or password'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '429': {description: Rate limit exceeded}
+        '429': {description: 'Rate limit exceeded'}
 
   /api/v1/auth/me:
     get:
@@ -598,7 +598,7 @@ paths:
       summary: Current authenticated CRM user with roles and permissions
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Current user in ApiResponse data}
+        '200': {description: 'Current user in ApiResponse data'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
 
   /api/v1/auth/logout:
@@ -607,7 +607,7 @@ paths:
       summary: Revoke the current Sanctum access token
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: AUTH_LOGOUT; data is null}
+        '200': {description: 'AUTH_LOGOUT; data is null'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
 
   /api/v1/dashboard:
@@ -1085,7 +1085,7 @@ paths:
           name: product_id
           schema: {type: integer}
       responses:
-        '200': {description: Paginated review models}
+        '200': {description: 'Paginated review models'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Product Reviews]
@@ -1105,8 +1105,8 @@ paths:
                 title: {type: string, nullable: true, maxLength: 150}
                 body: {type: string, nullable: true, maxLength: 3000}
       responses:
-        '201': {description: REVIEW_PENDING}
-        '422': {description: Validation failed, duplicate review or order not delivered}
+        '201': {description: 'REVIEW_PENDING'}
+        '422': {description: 'Validation failed, duplicate review or order not delivered'}
 
   /api/v1/product-reviews/{review}/moderate:
     parameters:
@@ -1128,7 +1128,7 @@ paths:
               properties:
                 status: {type: string, enum: [approved, rejected]}
       responses:
-        '200': {description: REVIEW_MODERATED}
+        '200': {description: 'REVIEW_MODERATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/newsletter/subscribers:
@@ -1158,7 +1158,7 @@ paths:
             schema:
               type: object
               properties:
-                status: {description: Validated by controller}
+                status: {description: 'Validated by controller'}
       responses:
         '200': {description: 'NEWSLETTER_SUBSCRIBER_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1171,7 +1171,7 @@ paths:
       summary: CRM paginated ritual list
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: RITUAL_ADMIN_LIST}
+        '200': {description: 'RITUAL_ADMIN_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
@@ -1184,7 +1184,7 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/RitualInput'}
       responses:
-        '201': {description: RITUAL_CREATED}
+        '201': {description: 'RITUAL_CREATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/rituals/{ritual}:
@@ -1198,8 +1198,8 @@ paths:
       summary: CRM ritual with steps and products
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: RITUAL_ADMIN_DETAIL}
-        '404': {description: Ritual not found}
+        '200': {description: 'RITUAL_ADMIN_DETAIL'}
+        '404': {description: 'Ritual not found'}
     patch:
       tags: [Rituals]
       summary: Update ritual and replace supplied steps or product links
@@ -1210,15 +1210,15 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/RitualInput'}
       responses:
-        '200': {description: RITUAL_UPDATED}
+        '200': {description: 'RITUAL_UPDATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Rituals]
       summary: Delete ritual
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: RITUAL_DELETED}
-        '404': {description: Ritual not found}
+        '200': {description: 'RITUAL_DELETED'}
+        '404': {description: 'Ritual not found'}
 
   /api/v1/ritual-quiz/questions:
     get:
@@ -1240,10 +1240,10 @@ paths:
             schema:
               type: object
               properties:
-                question: {description: Validated by controller}
-                question_ar: {description: Validated by controller}
-                sort_order: {description: Validated by controller}
-                is_active: {description: Validated by controller}
+                question: {description: 'Validated by controller'}
+                question_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
       responses:
         '201': {description: 'QUIZ_QUESTION_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1267,10 +1267,10 @@ paths:
             schema:
               type: object
               properties:
-                question: {description: Validated by controller}
-                question_ar: {description: Validated by controller}
-                sort_order: {description: Validated by controller}
-                is_active: {description: Validated by controller}
+                question: {description: 'Validated by controller'}
+                question_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
       responses:
         '200': {description: 'Quiz question updated'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1294,10 +1294,10 @@ paths:
             schema:
               type: object
               properties:
-                label: {description: Validated by controller}
-                label_ar: {description: Validated by controller}
-                sort_order: {description: Validated by controller}
-                is_active: {description: Validated by controller}
+                label: {description: 'Validated by controller'}
+                label_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
       responses:
         '201': {description: 'QUIZ_OPTION_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1321,10 +1321,10 @@ paths:
             schema:
               type: object
               properties:
-                label: {description: Validated by controller}
-                label_ar: {description: Validated by controller}
-                sort_order: {description: Validated by controller}
-                is_active: {description: Validated by controller}
+                label: {description: 'Validated by controller'}
+                label_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
       responses:
         '200': {description: 'Quiz option updated'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1348,7 +1348,7 @@ paths:
             schema:
               type: object
               properties:
-                products: {description: Validated by controller}
+                products: {description: 'Validated by controller'}
       responses:
         '200': {description: 'Option products synchronized'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -1361,7 +1361,7 @@ paths:
       summary: CRM ingredient list
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: INGREDIENT_LIST; paginated ingredient records}
+        '200': {description: 'INGREDIENT_LIST; paginated ingredient records'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
@@ -1374,7 +1374,7 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/IngredientInput'}
       responses:
-        '201': {description: INGREDIENT_CREATED}
+        '201': {description: 'INGREDIENT_CREATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -1390,8 +1390,8 @@ paths:
       summary: CRM ingredient detail
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Ingredient model in response data}
-        '404': {description: Ingredient not found}
+        '200': {description: 'Ingredient model in response data'}
+        '404': {description: 'Ingredient not found'}
     patch:
       tags: [Ingredients]
       summary: Update ingredient fields
@@ -1402,9 +1402,9 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/IngredientInput'}
       responses:
-        '200': {description: INGREDIENT_UPDATED}
+        '200': {description: 'INGREDIENT_UPDATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
-        '404': {description: Ingredient not found}
+        '404': {description: 'Ingredient not found'}
 
   /api/v1/categories/{category}/image:
     parameters:
@@ -1521,7 +1521,7 @@ paths:
         '200': {description: 'PRODUCT_IMAGE_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {description: Image does not belong to product or resource missing}
+        '404': {description: 'Image does not belong to product or resource missing'}
 
   /api/v1/currencies:
     get:
@@ -2195,7 +2195,7 @@ paths:
             schema:
               type: object
               properties:
-                reason: {description: Validated by controller}
+                reason: {description: 'Validated by controller'}
       responses:
         '201': {description: 'REFUND_REQUEST_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -2234,7 +2234,7 @@ paths:
             schema:
               type: object
               properties:
-                confirm: {description: Validated by controller}
+                confirm: {description: 'Validated by controller'}
       responses:
         '200': {description: 'REFUND_APPROVED_AWAITING_PROVIDER'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -2296,7 +2296,7 @@ paths:
                 payment_id: {type: string, pattern: '^[0-9]{1,64}$'}
       responses:
         '200': {description: 'SANDBOX_PROVIDER_ENQUIRY_MATCHED'}
-        '404': {description: Endpoint disabled or order not found}
+        '404': {description: 'Endpoint disabled or order not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -2314,7 +2314,7 @@ paths:
       security: [{sanctumBearer: []}]
       responses:
         '200': {description: 'SANDBOX_HOSTED_RESERVATION_STATUS'}
-        '404': {description: Endpoint disabled or order not found}
+        '404': {description: 'Endpoint disabled or order not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -2342,7 +2342,7 @@ paths:
       responses:
         '201': {description: 'SANDBOX_HOSTED_PAYMENT_CREATED'}
         '202': {description: 'SANDBOX_HOSTED_PAYMENT_UNRESOLVED'}
-        '404': {description: Endpoint disabled or order not found}
+        '404': {description: 'Endpoint disabled or order not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
@@ -2364,7 +2364,7 @@ paths:
             schema:
               type: object
               properties:
-                status: {description: Validated by controller}
+                status: {description: 'Validated by controller'}
       responses:
         '200': {description: 'ORDER_STATUS_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
