@@ -36,6 +36,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/storefront/ritual-quiz/recommendations', [RitualQuizController::class, 'recommend'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/ingredients', [IngredientController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/ingredients/{slug}', [IngredientController::class, 'publicShow'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/rituals/{slug}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'publicShow'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/brands', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'index'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/brands/{slug}', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'show'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
@@ -75,6 +77,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/product-reviews', [ProductReviewController::class, 'adminIndex'])->middleware('permission:products.view');
         Route::post('/product-reviews', [ProductReviewController::class, 'store'])->middleware('permission:products.manage');
         Route::patch('/product-reviews/{review}/moderate', [ProductReviewController::class, 'moderate'])->middleware('permission:products.manage');
+        Route::get('/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'adminIndex'])->middleware('permission:products.view');
+        Route::get('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'adminShow'])->middleware('permission:products.view');
+        Route::post('/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'destroy'])->middleware('permission:products.manage');
         Route::get('/ritual-quiz/questions', [RitualQuizController::class, 'adminIndex'])->middleware('permission:products.view');
         Route::post('/ritual-quiz/questions', [RitualQuizController::class, 'storeQuestion'])->middleware('permission:products.manage');
         Route::patch('/ritual-quiz/questions/{question}', [RitualQuizController::class, 'updateQuestion'])->middleware('permission:products.manage');
