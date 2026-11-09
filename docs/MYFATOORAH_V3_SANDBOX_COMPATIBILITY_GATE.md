@@ -15,11 +15,11 @@ Sources:
 - https://docs.myfatoorah.com/reference/create-payment
 - https://docs.myfatoorah.com/docs/get-payment-details
 
-## Current KHAM gap — must fix before real sandbox checkout
+## Current KHAM integration status — account-independent development
 
-`MyFatoorahV3Client::createHostedPayment()` currently sends only `Order.Amount`; it does not send the KHAM order number. Both the signed-webhook reconciler and the operator enquiry require `Invoice.ExternalIdentifier === order_number`. Official hosted examples show null, so a real payment may remain permanently unreconcilable even when provider reports PAID.
+`MyFatoorahV3Client::createHostedPayment()` now sends the server-generated KHAM order number as `Order.ExternalIdentifier` alongside the reserved amount. The outgoing JSON is asserted in the local mocked hosted regression. **This request field has NOT been verified against a real MyFatoorah V3 sandbox account.** The official hosted example returns `Invoice.ExternalIdentifier: null`; an actual provider response may reject the field or not echo it. Both signed-webhook reconciliation and operator enquiry deliberately fail closed if `Invoice.ExternalIdentifier` does not equal the KHAM order number. Do not relax that check or fabricate a signed event.
 
-**Do not relax the external identifier check or fabricate a signed event.** First establish the exact supported V3 request field through the provider's complete Order object schema or provider support. If confirmed, pass a server-generated order reference from the locked order, not from the browser. Assert the outgoing JSON body in a mocked regression and verify that GET payment details and signed webhook echo the exact reference in the real sandbox.
+**Manager-approved deferred work:** No merchant account or test API token is available. Account-independent mocked tests can be completed, but real gateway compatibility, genuine signed webhook delivery, and production readiness remain blocked until an authorized account is supplied. Never claim a mocked gateway response proves provider compatibility.
 
 ## Real sandbox acceptance sequence (manual, with approved sandbox token)
 
@@ -33,4 +33,10 @@ Sources:
 
 ## Local regression baseline
 
-Latest user-confirmed local mocked checks: hosted 30/30, webhook HTTP 20/20, end-to-end 22/22, HTTP security 6/6 (78/78 combined across runs). They do **not** establish provider compatibility.
+Latest user-confirmed local mocked checks: hosted **31/31** (commit `c3a2d57`), webhook HTTP **20/20**, end-to-end **22/22**, HTTP security **6/6** (**79/79** combined across separate runs). They do **not** establish provider compatibility.
+
+## Handover boundary
+
+- **Completed locally:** server-side amount and order-reference generation, disabled-by-default sandbox initiation, durable idempotency reservations, read-only provider enquiry, signed-event validation, atomic settlement, webhook replay protection, mocked failure cases, rollback-only database fixtures.
+- **Deferred, not complete:** provider acceptance of `Order.ExternalIdentifier`, actual sandbox payment, authentic provider webhook, real redirect callback, production token/domain configuration, live deployment and production reconciliation monitoring.
+- **Activation gate:** obtain an authorized MyFatoorah sandbox account/token privately; execute the real acceptance sequence above and resolve any schema differences before enabling real transactions. No live VPS or production configuration changes are authorized by this document.
