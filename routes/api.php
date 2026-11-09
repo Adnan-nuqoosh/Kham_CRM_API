@@ -48,6 +48,8 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:storefront-test-order');
     Route::post('/storefront/checkout/quote', PublicCheckoutQuoteController::class)
         ->middleware('throttle:storefront-quote');
+    Route::post('/auth/forgot-password', [\App\Http\Controllers\Api\V1\PasswordRecoveryController::class, 'forgot'])->middleware('throttle:login');
+    Route::post('/auth/reset-password', [\App\Http\Controllers\Api\V1\PasswordRecoveryController::class, 'reset'])->middleware('throttle:login');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware('auth:sanctum')->group(function () {
