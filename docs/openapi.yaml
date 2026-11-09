@@ -322,11 +322,65 @@ paths:
   /api/v1/storefront/products:
     get:
       tags: [Storefront]
-      summary: 'List active market-eligible storefront products'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      summary: 'List active market-priced storefront products'
+      description: 'Returns active products with sellable variants, localized fields and availability in the market fulfillment warehouse. No-store response.'
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200':
+          description: 'STOREFRONT_PRODUCTS with pagination metadata'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  code: {type: string, example: STOREFRONT_PRODUCTS}
+                  data:
+                    type: array
+                    items:
+                  type: object
+                  required: [id, slug, name, currency_code, variants]
+                  properties:
+                    id: {type: integer}
+                    slug: {type: string}
+                    badges: {type: array, items: {type: string}}
+                    locale: {type: string}
+                    name: {type: string}
+                    short_description: {type: string, nullable: true}
+                    description: {type: string, nullable: true}
+                    ingredients: {type: string, nullable: true}
+                    linked_ingredients:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: {type: integer}
+                          slug: {type: string}
+                          name: {type: string}
+                          description: {type: string, nullable: true}
+                    usage_instructions: {type: string, nullable: true}
+                    currency_code: {type: string}
+                    variants:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: {type: integer}
+                          title: {type: string}
+                          price: {type: string, nullable: true}
+                          in_stock: {type: boolean}
+                  meta: {type: object}
+        '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/products/{product}:
     parameters:
@@ -336,11 +390,57 @@ paths:
         schema: {type: string}
     get:
       tags: [Storefront]
-      summary: 'Active storefront product detail'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      summary: 'Get market-eligible active storefront product'
+      description: 'Inactive or non-sellable products return 404. Localized content and market stock availability; no-store response.'
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200':
+          description: 'STOREFRONT_PRODUCT'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  code: {type: string, example: STOREFRONT_PRODUCT}
+                  data:
+                  type: object
+                  required: [id, slug, name, currency_code, variants]
+                  properties:
+                    id: {type: integer}
+                    slug: {type: string}
+                    badges: {type: array, items: {type: string}}
+                    locale: {type: string}
+                    name: {type: string}
+                    short_description: {type: string, nullable: true}
+                    description: {type: string, nullable: true}
+                    ingredients: {type: string, nullable: true}
+                    linked_ingredients:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: {type: integer}
+                          slug: {type: string}
+                          name: {type: string}
+                          description: {type: string, nullable: true}
+                    usage_instructions: {type: string, nullable: true}
+                    currency_code: {type: string}
+                    variants:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id: {type: integer}
+                          title: {type: string}
+                          price: {type: string, nullable: true}
+                          in_stock: {type: boolean}
+        '404': {description: Product not found or unavailable for market}
+        '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/storefront/payments/myfatoorah/local-webhook:
     post:
