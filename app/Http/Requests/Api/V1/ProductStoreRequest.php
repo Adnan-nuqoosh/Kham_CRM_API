@@ -13,7 +13,7 @@ class ProductStoreRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['metadata', 'variants', 'image_alt_texts'] as $field) {
+        foreach (['metadata', 'variants', 'image_alt_texts', 'ingredient_ids'] as $field) {
             $value = $this->input($field);
 
             if (is_string($value)) {
@@ -53,6 +53,8 @@ class ProductStoreRequest extends FormRequest
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
+            'ingredient_ids' => ['sometimes', 'array', 'max:100'],
+            'ingredient_ids.*' => ['required', 'integer', 'distinct', 'exists:ingredients,id'],
 
             'images' => ['sometimes', 'array', 'min:1', 'max:10'],
             'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
