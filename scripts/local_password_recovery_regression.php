@@ -49,8 +49,8 @@ try{
  [$status,$body]=$send('forgot-password',['email'=>$email]);
  $check($status===200 && ($body['code']??'')==='AUTH_RESET_REQUESTED',
   'registered email receives same generic response');
- $sent=Notification::assertSentTo($user,CrmPasswordResetNotification::class);
- $check($sent!==null,'registered user receives password reset notification');
+ Notification::assertSentTo($user,CrmPasswordResetNotification::class);
+ $check(true,'registered user receives password reset notification');
  $token=Password::broker()->createToken($user);
  [$status,$body]=$send('reset-password',['email'=>$email,'token'=>'invalid-token',
   'password'=>'NewPassword-Example-12345','password_confirmation'=>'NewPassword-Example-12345']);
