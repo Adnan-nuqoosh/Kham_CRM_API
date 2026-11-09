@@ -56,3 +56,9 @@ php scripts/local_myfatoorah_end_to_end_regression.php
 - Developer's latest local run: **hosted 14/14 PASS**, **HTTP webhook 20/20 PASS**, **end-to-end 22/22 PASS** = **56/56 checks across three suites**. Database fixtures and Egypt stock restored.
 - **Remaining safety work:** test timeout and same-key replay of an *uncertain* reservation explicitly; test process crash between reservation and provider request, concurrent requests, and failure between provider success and database commit. Add controlled reconciliation/manual resolution and payment failed/cancelled lifecycle; no automatic second charge.
 - **Still pending:** guest hosted checkout integration, frontend API contract, live sandbox API schema verification/real sandbox transaction, and production hardening. No live VPS deployment or migration.
+
+### Additional retry/crash regression verification — 2026-11-09
+- Developer pulled commit `4d19ab7`, PHP lint passed and ran hosted checkout regression: **16/16 PASS** plus rollback/stock restoration.
+- Added scenarios confirmed: uncertain same-key retry returns 202 without a second provider POST; different-key retry rejected; interrupted `requesting` reservation replay fails closed without another provider call.
+- Latest verified suites: hosted **16/16**, HTTP webhook **20/20**, end-to-end **22/22** = **58/58** (the latter two from prior runs).
+- **Next:** implement authenticated, controlled reconciliation of uncertain reservations and explicit failed/cancelled handling, without trusting browser callbacks or allowing unsafe automatic re-initiation. Real sandbox and production verification remain pending.
