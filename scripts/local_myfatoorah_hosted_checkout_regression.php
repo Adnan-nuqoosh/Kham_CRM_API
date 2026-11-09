@@ -171,6 +171,7 @@ try {
     } catch (ValidationException $e) {
         $assert($collision->payments()->count() === 0
             && DB::table('myfatoorah_checkout_reservations')->where('order_id', $collision->id)->value('status') === 'uncertain'
+            && DB::table('myfatoorah_checkout_reservations')->where('order_id', $collision->id)->value('invoice_id') === $invoice
             && $order->payments()->count() === 1,
             'Duplicate provider invoice leaves blocked uncertain reservation');
     }
@@ -299,7 +300,9 @@ try {
     } catch (ValidationException $e) {
         $assert($midflightCancelled->payments()->count() === 0
             && DB::table('myfatoorah_checkout_reservations')
-                ->where('order_id', $midflightCancelled->id)->value('status') === 'uncertain',
+                ->where('order_id', $midflightCancelled->id)->value('status') === 'uncertain'
+            && DB::table('myfatoorah_checkout_reservations')
+                ->where('order_id', $midflightCancelled->id)->value('invoice_id') !== null,
             'Midflight cancelled order retains uncertain reservation without payment');
     }
 
