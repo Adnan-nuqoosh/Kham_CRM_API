@@ -77,6 +77,9 @@ try {
 
     config(['commerce.storefront_test_checkout_enabled'=>true]);
     [$status,$response]=$send($payload);
+    if ($status!==201 || ($response['code']??'')!=='MOCK_CHECKOUT_ORDER') {
+        echo 'DEBUG mock checkout HTTP='.$status.' response='.json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR).PHP_EOL;
+    }
     $assert($status===201 && ($response['code']??'')==='MOCK_CHECKOUT_ORDER',
         'Guest mock order created locally without CRM token');
     $number=$response['data']['order_number']??'';
