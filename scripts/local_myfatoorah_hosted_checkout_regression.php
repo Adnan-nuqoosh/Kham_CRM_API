@@ -114,6 +114,12 @@ try {
     $invoice = (string) random_int(100000000, 999999999);
     $fake(['InvoiceId' => $invoice, 'PaymentURL' => $url]);
     [$status, $body] = $invoke($order);
+    $assert(Http::recorded(static function ($request) use ($order) {
+        return $request->method() === 'POST'
+            && str_contains($request->url(), '/v3/payments')
+            && (string) data_get($request->data(), 'Order.ExternalIdentifier') === (string) $order->order_number
+            && (float) data_get($request->data(), 'Order.Amount') === (float) $order->grand_total;
+    }), 'Hosted request sends trusted order reference and amount to provider');
     $assert($status === 201 && data_get($body, 'code') === 'SANDBOX_HOSTED_PAYMENT_CREATED',
         'Hosted payment initiated with mocked provider');
     $reservation = DB::table('myfatoorah_checkout_reservations')->where('order_id', $order->id)->first();
