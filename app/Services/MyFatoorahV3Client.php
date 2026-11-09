@@ -36,7 +36,8 @@ final class MyFatoorahV3Client
         string $amount,
         string $redirectUrl,
         string $idempotencyKey,
-        ?string $paymentMethod = null
+        ?string $paymentMethod = null,
+        string $orderReference = ''
     ): array {
         if (!preg_match('/^(?:0|[1-9][0-9]{0,10})(?:\.[0-9]{1,4})?$/D', $amount)
             || (float) $amount <= 0) {
@@ -53,8 +54,12 @@ final class MyFatoorahV3Client
             throw ValidationException::withMessages(['payment_method' => ['Unsupported payment method.']]);
         }
 
+        if (!preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $orderReference)) {
+            throw ValidationException::withMessages(['order_reference' => ['A server-generated order reference is required.']]);
+        }
+
         $payload = [
-            'Order' => ['Amount' => (float) $amount],
+            'Order' => ['Amount' => (float) $amount, 'ExternalIdentifier' => $orderReference],
             'IntegrationUrls' => ['Redirection' => $redirectUrl],
         ];
         if ($paymentMethod !== null) {
