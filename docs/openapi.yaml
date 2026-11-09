@@ -3,9 +3,9 @@ info:
   title: KHAM Commerce OS API
   version: 1.0.0
   description: |
-    Phase 1 OpenAPI contract for the verified storefront and CRM content modules.
-    This is a curated subset, not a complete inventory of all Laravel routes.
-    See docs/API_DOCUMENTATION.md for route inventory and coverage checks.
+    Full Laravel route/method inventory with selectively reviewed contracts.
+    Operations marked x-documentation-status: route-inventory-only are placeholders,
+    not validated request/response contracts. See docs/API_DOCUMENTATION.md.
 servers:
   - url: http://localhost
     description: Local XAMPP (replace with your own base URL)
