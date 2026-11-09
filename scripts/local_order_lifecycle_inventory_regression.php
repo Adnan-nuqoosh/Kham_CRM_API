@@ -80,8 +80,8 @@ try {
     $statuses->transition($shipOrder,OrderStatus::Returned);
     $check((int)$stock->fresh()->on_hand===8,
         'returned status does not automatically restock uninspected goods');
-    foreach ([\\App\\Enums\\PaymentStatus::Authorized, \\App\\Enums\\PaymentStatus::Paid,
-        \\App\\Enums\\PaymentStatus::PartiallyRefunded, \\App\\Enums\\PaymentStatus::Refunded] as $paymentState) {
+    foreach ([\App\Enums\PaymentStatus::Authorized, \App\Enums\PaymentStatus::Paid,
+        \App\Enums\PaymentStatus::PartiallyRefunded, \App\Enums\PaymentStatus::Refunded] as $paymentState) {
         $paidOrder = $orders->create($payload);
         $paidOrder->forceFill(['payment_status'=>$paymentState])->save();
         $beforeReserved = (int)$stock->fresh()->reserved;
