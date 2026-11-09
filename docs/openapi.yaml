@@ -10,13 +10,39 @@ servers:
   - url: http://localhost
     description: Local XAMPP (replace with your own base URL)
 tags:
+  - name: Authentication
+    description: CRM authentication and password recovery
+  - name: CRM
+    description: Authenticated commerce administration
   - name: Homepage
-  - name: Partners
+    description: Public homepage and CRM homepage content management
+  - name: Ingredients
+    description: Ingredient administration
+  - name: Media
+    description: Catalog image uploads and removal
   - name: Newsletter
+    description: Newsletter subscriptions and subscriber administration
+  - name: Partners
+    description: Partner application submission and review
+  - name: Product Reviews
+    description: Product ratings and review moderation
+  - name: Rituals
+    description: Ritual content administration
+  - name: Sandbox Payments
+    description: Local and testing-only payment and checkout workflows
+  - name: Storefront
+    description: Public storefront catalog and checkout
+  - name: Storefront Brands
+    description: Public brand discovery
+  - name: Storefront Ingredients
+    description: Public ingredient discovery
+  - name: Storefront Rituals
+    description: Public ritual content
 security: []
 paths:
   /api/v1/storefront/homepage:
     get:
+      operationId: get_storefront_homepage
       tags: [Homepage]
       summary: Published homepage sections in English or Arabic
       parameters:
@@ -39,6 +65,7 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
   /api/v1/homepage/sections:
     get:
+      operationId: get_homepage_sections
       tags: [Homepage]
       summary: CRM homepage section listing (products.view)
       security: [{sanctumBearer: []}]
@@ -51,6 +78,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_homepage_sections
       tags: [Homepage]
       summary: Create homepage section (products.manage)
       security: [{sanctumBearer: []}]
@@ -71,6 +99,7 @@ paths:
         required: true
         schema: {type: integer}
     patch:
+      operationId: patch_homepage_sections_by_section
       tags: [Homepage]
       summary: Update homepage section (products.manage)
       security: [{sanctumBearer: []}]
@@ -86,6 +115,7 @@ paths:
         '404': {description: 'Section not found'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_homepage_sections_by_section
       tags: [Homepage]
       summary: Delete homepage section (products.manage)
       security: [{sanctumBearer: []}]
@@ -96,6 +126,7 @@ paths:
         '404': {description: 'Section not found'}
   /api/v1/storefront/partners/apply:
     post:
+      operationId: post_storefront_partners_apply
       tags: [Partners]
       summary: Submit partner application (rate limited)
       requestBody:
@@ -110,6 +141,7 @@ paths:
         '429': {description: 'Rate limit exceeded'}
   /api/v1/partner-applications:
     get:
+      operationId: get_partner_applications
       tags: [Partners]
       summary: CRM applications listing (customers.view)
       security: [{sanctumBearer: []}]
@@ -131,6 +163,7 @@ paths:
         required: true
         schema: {type: integer}
     get:
+      operationId: get_partner_applications_by_application
       tags: [Partners]
       summary: CRM application detail (customers.view)
       security: [{sanctumBearer: []}]
@@ -140,6 +173,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {description: 'Application not found'}
     patch:
+      operationId: patch_partner_applications_by_application
       tags: [Partners]
       summary: Review application (customers.manage)
       security: [{sanctumBearer: []}]
@@ -161,6 +195,7 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
   /api/v1/storefront/newsletter/subscribe:
     post:
+      operationId: post_storefront_newsletter_subscribe
       tags: [Newsletter]
       summary: Subscribe or resubscribe email (rate limited)
       requestBody:
@@ -178,6 +213,7 @@ paths:
         '429': {description: 'Rate limit exceeded'}
   /api/v1/storefront/newsletter/unsubscribe:
     post:
+      operationId: post_storefront_newsletter_unsubscribe
       tags: [Newsletter]
       summary: Process unsubscribe token without disclosing subscription status
       description: Returns the same success envelope whether or not the token matches an active subscription.
@@ -202,6 +238,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_storefront_products_by_product_reviews
       tags: [Product Reviews]
       summary: Approved reviews and rating summary for active product
       parameters:
@@ -218,6 +255,7 @@ paths:
 
   /api/v1/storefront/ritual-quiz/questions:
     get:
+      operationId: get_storefront_ritual_quiz_questions
       tags: [Storefront]
       summary: 'Active localized quiz questions and options'
       responses:
@@ -225,6 +263,7 @@ paths:
 
   /api/v1/storefront/ritual-quiz/recommendations:
     post:
+      operationId: post_storefront_ritual_quiz_recommendations
       tags: [Storefront]
       summary: 'Recommend market-eligible products from selected quiz options'
       requestBody:
@@ -242,6 +281,7 @@ paths:
 
   /api/v1/storefront/ingredients:
     get:
+      operationId: get_storefront_ingredients
       tags: [Storefront Ingredients]
       summary: List active ingredients with localized names and descriptions
       parameters:
@@ -259,6 +299,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_storefront_ingredients_by_slug
       tags: [Storefront Ingredients]
       summary: Get an active ingredient by slug
       responses:
@@ -267,6 +308,7 @@ paths:
 
   /api/v1/storefront/rituals:
     get:
+      operationId: get_storefront_rituals
       tags: [Storefront Rituals]
       summary: Paginated published rituals with localized content
       responses:
@@ -279,6 +321,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_storefront_rituals_by_slug
       tags: [Storefront Rituals]
       summary: Published ritual detail including localized steps and active products
       responses:
@@ -287,6 +330,7 @@ paths:
 
   /api/v1/storefront/brands:
     get:
+      operationId: get_storefront_brands
       tags: [Storefront Brands]
       summary: Paginated active brands with localized display fields
       parameters:
@@ -307,6 +351,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_storefront_brands_by_slug
       tags: [Storefront Brands]
       summary: Active brand detail and up to 100 active market-eligible products
       parameters:
@@ -321,6 +366,7 @@ paths:
 
   /api/v1/storefront/products:
     get:
+      operationId: get_storefront_products
       tags: [Storefront]
       summary: 'List active market-priced storefront products'
       description: 'Returns active products with sellable variants, localized fields and availability in the market fulfillment warehouse. No-store response.'
@@ -389,6 +435,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_storefront_products_by_product
       tags: [Storefront]
       summary: 'Get market-eligible active storefront product'
       description: 'Inactive or non-sellable products return 404. Localized content and market stock availability; no-store response.'
@@ -444,6 +491,7 @@ paths:
 
   /api/v1/storefront/payments/myfatoorah/local-webhook:
     post:
+      operationId: post_storefront_payments_myfatoorah_local_webhook
       tags: [Sandbox Payments]
       summary: 'Local/testing-only signed MyFatoorah webhook; 64 KiB JSON limit; signed identifiers matched to stored payment and authoritative provider details'
       description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
@@ -456,6 +504,7 @@ paths:
 
   /api/v1/storefront/checkout/test-order:
     post:
+      operationId: post_storefront_checkout_test_order
       tags: [Sandbox Payments]
       summary: 'Local-only mock checkout; no card collection or real payment; idempotency key and market, cart, customer, address required'
       description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
@@ -480,6 +529,7 @@ paths:
 
   /api/v1/storefront/checkout/quote:
     post:
+      operationId: post_storefront_checkout_quote
       tags: [Storefront]
       summary: 'Public non-binding quote with stock checks and no client prices'
       requestBody:
@@ -533,6 +583,7 @@ paths:
 
   /api/v1/auth/forgot-password:
     post:
+      operationId: post_auth_forgot_password
       tags: [Authentication]
       summary: Request CRM password reset without account enumeration
       requestBody:
@@ -552,6 +603,7 @@ paths:
 
   /api/v1/auth/reset-password:
     post:
+      operationId: post_auth_reset_password
       tags: [Authentication]
       summary: Reset CRM password and revoke existing API tokens
       requestBody:
@@ -573,6 +625,7 @@ paths:
 
   /api/v1/auth/login:
     post:
+      operationId: post_auth_login
       tags: [Authentication]
       summary: Authenticate CRM user and issue Sanctum bearer token
       requestBody:
@@ -594,6 +647,7 @@ paths:
 
   /api/v1/auth/me:
     get:
+      operationId: get_auth_me
       tags: [Authentication]
       summary: Current authenticated CRM user with roles and permissions
       security: [{sanctumBearer: []}]
@@ -603,6 +657,7 @@ paths:
 
   /api/v1/auth/logout:
     post:
+      operationId: post_auth_logout
       tags: [Authentication]
       summary: Revoke the current Sanctum access token
       security: [{sanctumBearer: []}]
@@ -612,6 +667,7 @@ paths:
 
   /api/v1/dashboard:
     get:
+      operationId: get_dashboard
       tags: [CRM]
       summary: 'CRM dashboard totals, statuses and seven-day sales'
       security: [{sanctumBearer: []}]
@@ -642,6 +698,7 @@ paths:
 
   /api/v1/products:
     get:
+      operationId: get_products
       tags: [CRM]
       summary: 'Paginated CRM products with variants, prices, stocks and media'
       security: [{sanctumBearer: []}]
@@ -662,6 +719,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_products
       tags: [CRM]
       summary: 'Create product with nested variants, prices, stock and optional images'
       security: [{sanctumBearer: []}]
@@ -714,6 +772,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_products_by_product
       tags: [CRM]
       summary: 'CRM product details with nested catalog relations'
       security: [{sanctumBearer: []}]
@@ -723,6 +782,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_products_by_product
       tags: [CRM]
       summary: 'Update product including multipart images'
       security: [{sanctumBearer: []}]
@@ -767,6 +827,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     put:
+      operationId: put_products_by_product
       tags: [CRM]
       summary: 'Update product fields and nested variants'
       security: [{sanctumBearer: []}]
@@ -811,6 +872,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
+      operationId: patch_products_by_product
       tags: [CRM]
       summary: 'Update product fields and nested variants'
       security: [{sanctumBearer: []}]
@@ -855,6 +917,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
+      operationId: delete_products_by_product
       tags: [CRM]
       summary: 'Soft archive product'
       security: [{sanctumBearer: []}]
@@ -866,6 +929,7 @@ paths:
 
   /api/v1/categories:
     get:
+      operationId: get_categories
       tags: [CRM]
       summary: 'Category tree or paginated category list'
       security: [{sanctumBearer: []}]
@@ -892,6 +956,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_categories
       tags: [CRM]
       summary: 'Create category; nesting limited to three levels'
       security: [{sanctumBearer: []}]
@@ -927,6 +992,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_categories_by_category
       tags: [CRM]
       summary: 'Category detail with localized parent and descendants'
       security: [{sanctumBearer: []}]
@@ -936,6 +1002,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
+      operationId: patch_categories_by_category
       tags: [CRM]
       summary: 'Update category and validate ancestry/depth'
       security: [{sanctumBearer: []}]
@@ -963,6 +1030,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
+      operationId: delete_categories_by_category
       tags: [CRM]
       summary: 'Delete category'
       security: [{sanctumBearer: []}]
@@ -974,6 +1042,7 @@ paths:
 
   /api/v1/brands:
     get:
+      operationId: get_brands
       tags: [CRM]
       summary: 'Paginated localized brands'
       security: [{sanctumBearer: []}]
@@ -994,6 +1063,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_brands
       tags: [CRM]
       summary: 'Create brand with optional image'
       security: [{sanctumBearer: []}]
@@ -1028,6 +1098,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_brands_by_brand
       tags: [CRM]
       summary: 'Localized brand detail'
       security: [{sanctumBearer: []}]
@@ -1037,6 +1108,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
+      operationId: patch_brands_by_brand
       tags: [CRM]
       summary: 'Update brand metadata'
       security: [{sanctumBearer: []}]
@@ -1063,6 +1135,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
+      operationId: delete_brands_by_brand
       tags: [CRM]
       summary: 'Delete brand'
       security: [{sanctumBearer: []}]
@@ -1074,6 +1147,7 @@ paths:
 
   /api/v1/product-reviews:
     get:
+      operationId: get_product_reviews
       tags: [Product Reviews]
       summary: CRM reviews list, optionally filtered by status or product
       security: [{sanctumBearer: []}]
@@ -1088,6 +1162,7 @@ paths:
         '200': {description: 'Paginated review models'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
+      operationId: post_product_reviews
       tags: [Product Reviews]
       summary: Create pending review from delivered order item
       description: Reviewer identity and verified purchase are derived server-side; client cannot set them.
@@ -1115,6 +1190,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_product_reviews_by_review_moderate
       tags: [Product Reviews]
       summary: Approve or reject review
       security: [{sanctumBearer: []}]
@@ -1133,6 +1209,7 @@ paths:
 
   /api/v1/newsletter/subscribers:
     get:
+      operationId: get_newsletter_subscribers
       tags: [CRM]
       summary: 'CRM paginated subscriber search and status filter'
       security: [{sanctumBearer: []}]
@@ -1148,6 +1225,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_newsletter_subscribers_by_subscriber
       tags: [CRM]
       summary: 'Change subscription status and rotate unsubscribe token'
       security: [{sanctumBearer: []}]
@@ -1167,6 +1245,7 @@ paths:
 
   /api/v1/rituals:
     get:
+      operationId: get_rituals
       tags: [Rituals]
       summary: CRM paginated ritual list
       security: [{sanctumBearer: []}]
@@ -1175,6 +1254,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_rituals
       tags: [Rituals]
       summary: Create ritual and optional steps/product links transactionally
       security: [{sanctumBearer: []}]
@@ -1194,6 +1274,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_rituals_by_ritual
       tags: [Rituals]
       summary: CRM ritual with steps and products
       security: [{sanctumBearer: []}]
@@ -1201,6 +1282,7 @@ paths:
         '200': {description: 'RITUAL_ADMIN_DETAIL'}
         '404': {description: 'Ritual not found'}
     patch:
+      operationId: patch_rituals_by_ritual
       tags: [Rituals]
       summary: Update ritual and replace supplied steps or product links
       security: [{sanctumBearer: []}]
@@ -1213,6 +1295,7 @@ paths:
         '200': {description: 'RITUAL_UPDATED'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_rituals_by_ritual
       tags: [Rituals]
       summary: Delete ritual
       security: [{sanctumBearer: []}]
@@ -1222,6 +1305,7 @@ paths:
 
   /api/v1/ritual-quiz/questions:
     get:
+      operationId: get_ritual_quiz_questions
       tags: [CRM]
       summary: 'CRM quiz questions with options and products'
       security: [{sanctumBearer: []}]
@@ -1230,6 +1314,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_ritual_quiz_questions
       tags: [CRM]
       summary: 'Create quiz question'
       security: [{sanctumBearer: []}]
@@ -1257,6 +1342,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_ritual_quiz_questions_by_question
       tags: [CRM]
       summary: 'Update quiz question'
       security: [{sanctumBearer: []}]
@@ -1284,6 +1370,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_ritual_quiz_questions_by_question_options
       tags: [CRM]
       summary: 'Create quiz option'
       security: [{sanctumBearer: []}]
@@ -1311,6 +1398,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_ritual_quiz_options_by_option
       tags: [CRM]
       summary: 'Update quiz option'
       security: [{sanctumBearer: []}]
@@ -1338,6 +1426,7 @@ paths:
         required: true
         schema: {type: string}
     put:
+      operationId: put_ritual_quiz_options_by_option_products
       tags: [CRM]
       summary: 'Replace option product weights'
       security: [{sanctumBearer: []}]
@@ -1357,6 +1446,7 @@ paths:
 
   /api/v1/ingredients:
     get:
+      operationId: get_ingredients
       tags: [Ingredients]
       summary: CRM ingredient list
       security: [{sanctumBearer: []}]
@@ -1365,6 +1455,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_ingredients
       tags: [Ingredients]
       summary: Create ingredient
       security: [{sanctumBearer: []}]
@@ -1386,6 +1477,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_ingredients_by_ingredient
       tags: [Ingredients]
       summary: CRM ingredient detail
       security: [{sanctumBearer: []}]
@@ -1393,6 +1485,7 @@ paths:
         '200': {description: 'Ingredient model in response data'}
         '404': {description: 'Ingredient not found'}
     patch:
+      operationId: patch_ingredients_by_ingredient
       tags: [Ingredients]
       summary: Update ingredient fields
       security: [{sanctumBearer: []}]
@@ -1413,6 +1506,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_categories_by_category_image
       tags: [Media]
       summary: 'Upload category image'
       security: [{sanctumBearer: []}]
@@ -1431,6 +1525,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_categories_by_category_image
       tags: [Media]
       summary: 'Delete category image'
       security: [{sanctumBearer: []}]
@@ -1446,6 +1541,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_brands_by_brand_image
       tags: [Media]
       summary: 'Upload brand logo'
       security: [{sanctumBearer: []}]
@@ -1464,6 +1560,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_brands_by_brand_image
       tags: [Media]
       summary: 'Delete brand logo'
       security: [{sanctumBearer: []}]
@@ -1479,6 +1576,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_products_by_product_images
       tags: [Media]
       summary: 'Upload one to ten product images'
       security: [{sanctumBearer: []}]
@@ -1514,6 +1612,7 @@ paths:
         required: true
         schema: {type: string}
     delete:
+      operationId: delete_products_by_product_images_by_media
       tags: [Media]
       summary: 'Delete image belonging to specified product'
       security: [{sanctumBearer: []}]
@@ -1525,6 +1624,7 @@ paths:
 
   /api/v1/currencies:
     get:
+      operationId: get_currencies
       tags: [CRM]
       summary: 'List currencies with associated catalog metadata'
       security: [{sanctumBearer: []}]
@@ -1536,6 +1636,7 @@ paths:
 
   /api/v1/markets:
     get:
+      operationId: get_markets
       tags: [CRM]
       summary: 'List markets with associated catalog metadata'
       security: [{sanctumBearer: []}]
@@ -1547,6 +1648,7 @@ paths:
 
   /api/v1/warehouses:
     get:
+      operationId: get_warehouses
       tags: [CRM]
       summary: 'List warehouses with associated catalog metadata'
       security: [{sanctumBearer: []}]
@@ -1558,6 +1660,7 @@ paths:
 
   /api/v1/prices/upsert:
     post:
+      operationId: post_prices_upsert
       tags: [CRM]
       summary: 'Create or update variant market price'
       security: [{sanctumBearer: []}]
@@ -1588,6 +1691,7 @@ paths:
 
   /api/v1/inventory:
     get:
+      operationId: get_inventory
       tags: [CRM]
       summary: 'Inventory stocks with product and warehouse relations'
       security: [{sanctumBearer: []}]
@@ -1606,6 +1710,7 @@ paths:
 
   /api/v1/inventory/movements:
     get:
+      operationId: get_inventory_movements
       tags: [CRM]
       summary: 'Paginated stock movement ledger'
       security: [{sanctumBearer: []}]
@@ -1627,6 +1732,7 @@ paths:
 
   /api/v1/inventory/adjust:
     post:
+      operationId: post_inventory_adjust
       tags: [CRM]
       summary: 'Adjust on-hand stock transactionally; reject negative resulting stock'
       security: [{sanctumBearer: []}]
@@ -1650,6 +1756,7 @@ paths:
 
   /api/v1/customers:
     get:
+      operationId: get_customers
       tags: [CRM]
       summary: 'Search customers with order counts and sums'
       security: [{sanctumBearer: []}]
@@ -1663,6 +1770,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
+      operationId: post_customers
       tags: [CRM]
       summary: 'Create customer record'
       security: [{sanctumBearer: []}]
@@ -1695,6 +1803,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_customers_by_customer
       tags: [CRM]
       summary: 'Get customer with addresses and order items'
       security: [{sanctumBearer: []}]
@@ -1704,6 +1813,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     patch:
+      operationId: patch_customers_by_customer
       tags: [CRM]
       summary: 'Update customer fields'
       security: [{sanctumBearer: []}]
@@ -1729,6 +1839,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_customers_by_customer
       tags: [CRM]
       summary: 'Delete customer'
       security: [{sanctumBearer: []}]
@@ -1739,6 +1850,7 @@ paths:
 
   /api/v1/coupons:
     get:
+      operationId: get_coupons
       tags: [CRM]
       summary: 'Paginated coupons'
       security: [{sanctumBearer: []}]
@@ -1748,6 +1860,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
+      operationId: post_coupons
       tags: [CRM]
       summary: 'Create coupon; code normalized to uppercase'
       security: [{sanctumBearer: []}]
@@ -1784,6 +1897,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_coupons_by_coupon
       tags: [CRM]
       summary: 'Get coupon detail'
       security: [{sanctumBearer: []}]
@@ -1793,6 +1907,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     patch:
+      operationId: patch_coupons_by_coupon
       tags: [CRM]
       summary: 'Update coupon fields'
       security: [{sanctumBearer: []}]
@@ -1821,6 +1936,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_coupons_by_coupon
       tags: [CRM]
       summary: 'Delete coupon'
       security: [{sanctumBearer: []}]
@@ -1831,6 +1947,7 @@ paths:
 
   /api/v1/checkout/quote:
     post:
+      operationId: post_checkout_quote
       tags: [CRM]
       summary: 'Authenticated provisional quote with optional coupon'
       security: [{sanctumBearer: []}]
@@ -1887,6 +2004,7 @@ paths:
 
   /api/v1/market-tax-rules:
     get:
+      operationId: get_market_tax_rules
       tags: [CRM]
       summary: 'List market tax policies'
       security: [{sanctumBearer: []}]
@@ -1903,6 +2021,7 @@ paths:
         required: true
         schema: {type: string}
     put:
+      operationId: put_markets_by_market_tax_rule
       tags: [CRM]
       summary: 'Save tax policy; changes revoke prior approval'
       security: [{sanctumBearer: []}]
@@ -1930,6 +2049,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_markets_by_market_tax_rule_approve
       tags: [CRM]
       summary: 'Approve configured tax policy; final payable remains disabled'
       security: [{sanctumBearer: []}]
@@ -1950,6 +2070,7 @@ paths:
 
   /api/v1/shipping-rules:
     get:
+      operationId: get_shipping_rules
       tags: [CRM]
       summary: 'List market shipping rules'
       security: [{sanctumBearer: []}]
@@ -1963,6 +2084,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
+      operationId: post_shipping_rules
       tags: [CRM]
       summary: 'Create unique market/city shipping rule; city may be *'
       security: [{sanctumBearer: []}]
@@ -1992,6 +2114,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_shipping_rules_by_shippingRule
       tags: [CRM]
       summary: 'Update shipping charges; market and city are immutable'
       security: [{sanctumBearer: []}]
@@ -2014,6 +2137,7 @@ paths:
 
   /api/v1/finance/report/export.csv:
     get:
+      operationId: get_finance_report_export_csv
       tags: [CRM]
       summary: 'Download finance report CSV using same filters as finance report'
       security: [{sanctumBearer: []}]
@@ -2038,6 +2162,7 @@ paths:
 
   /api/v1/finance/report:
     get:
+      operationId: get_finance_report
       tags: [CRM]
       summary: 'Finance report: delivered sales, expenses, COGS and provisional profit'
       security: [{sanctumBearer: []}]
@@ -2062,6 +2187,7 @@ paths:
 
   /api/v1/finance/expenses:
     get:
+      operationId: get_finance_expenses
       tags: [CRM]
       summary: 'Paginated expenses ordered by incurred date'
       security: [{sanctumBearer: []}]
@@ -2084,6 +2210,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
+      operationId: post_finance_expenses
       tags: [CRM]
       summary: 'Create expense for active market and its currency'
       security: [{sanctumBearer: []}]
@@ -2114,6 +2241,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_finance_expenses_by_expense
       tags: [CRM]
       summary: 'Update expense; market and currency cannot be reassigned'
       security: [{sanctumBearer: []}]
@@ -2136,6 +2264,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
+      operationId: delete_finance_expenses_by_expense
       tags: [CRM]
       summary: 'Archive expense'
       security: [{sanctumBearer: []}]
@@ -2151,6 +2280,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_finance_order_items_by_item_cost
       tags: [CRM]
       summary: 'Set historical order-item unit cost in an active currency'
       security: [{sanctumBearer: []}]
@@ -2177,6 +2307,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_orders_by_order_refund_requests
       tags: [CRM]
       summary: 'List refund requests for order'
       security: [{sanctumBearer: []}]
@@ -2185,6 +2316,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_orders_by_order_refund_requests
       tags: [CRM]
       summary: 'Request refund; does not initiate provider refund'
       security: [{sanctumBearer: []}]
@@ -2209,6 +2341,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_refund_requests_by_refund_audit
       tags: [CRM]
       summary: 'List refund audit events'
       security: [{sanctumBearer: []}]
@@ -2224,6 +2357,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_refund_requests_by_refund_approve
       tags: [CRM]
       summary: 'Approve refund; requester cannot approve own request; provider refund not initiated'
       security: [{sanctumBearer: []}]
@@ -2243,6 +2377,7 @@ paths:
 
   /api/v1/orders:
     get:
+      operationId: get_orders
       tags: [CRM]
       summary: 'Paginated CRM orders with filters'
       security: [{sanctumBearer: []}]
@@ -2251,6 +2386,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
+      operationId: post_orders
       tags: [CRM]
       summary: 'Create order and reserve inventory'
       security: [{sanctumBearer: []}]
@@ -2267,6 +2403,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_orders_by_order
       tags: [CRM]
       summary: 'Order detail with related customer items payments and shipments'
       security: [{sanctumBearer: []}]
@@ -2282,6 +2419,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_orders_by_order_payments_myfatoorah_sandbox_hosted_provider_enquiry
       tags: [Sandbox Payments]
       summary: 'Local/testing-only read-only provider enquiry; validates payment_id against stored invoice, order, currency and amount; never settles'
       description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
@@ -2308,6 +2446,7 @@ paths:
         required: true
         schema: {type: string}
     get:
+      operationId: get_orders_by_order_payments_myfatoorah_sandbox_hosted_status
       tags: [Sandbox Payments]
       summary: 'Local/testing-only read-only hosted reservation status; does not query provider or authorize retry'
       description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
@@ -2326,6 +2465,7 @@ paths:
         required: true
         schema: {type: string}
     post:
+      operationId: post_orders_by_order_payments_myfatoorah_sandbox_hosted
       tags: [Sandbox Payments]
       summary: 'Local/testing-only sandbox hosted payment initiation; idempotent reservation; redirect does not prove payment'
       description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
@@ -2354,6 +2494,7 @@ paths:
         required: true
         schema: {type: string}
     patch:
+      operationId: patch_orders_by_order_status
       tags: [CRM]
       summary: 'Transition order status'
       security: [{sanctumBearer: []}]
