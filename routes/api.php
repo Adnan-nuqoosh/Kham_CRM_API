@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahWebhookController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 
 Route::prefix('v1')->group(function () {
     // Disabled by default; controller also rejects non-local environments.
@@ -144,6 +145,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:orders.view');
         Route::get('/orders/{order}', [OrderController::class, 'show'])
             ->middleware('permission:orders.view');
+        Route::get('/orders/{order}/payments/myfatoorah/sandbox-hosted/status', LocalMyFatoorahReservationStatusController::class)
+            ->middleware(['permission:orders.view', 'throttle:storefront-test-order']);
         Route::post('/orders/{order}/payments/myfatoorah/sandbox-hosted', LocalMyFatoorahHostedCheckoutController::class)
             ->middleware(['permission:orders.manage', 'throttle:storefront-test-order']);
         Route::post('/orders', [OrderController::class, 'store'])
