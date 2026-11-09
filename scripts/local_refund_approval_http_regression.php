@@ -108,6 +108,19 @@ try {
     $check((int) $stock->fresh()->reserved === 1
         && (int) $stock->fresh()->on_hand === 10,
         'approval does not release or sell reserved stock');
+    [$status] = $call('GET', "refund-requests/{$refund->id}/audit");
+    $check($status === 200, 'finance approver can read refund audit');
+    $events = \App\Models\RefundAuditEvent::where('refund_request_id', $refund->id)->orderBy('id')->get();
+    $check($events->count() === 2 && $events[0]->event_type === 'requested'
+        && $events[1]->event_type === 'finance_approved',
+        'request and approval recorded as ordered audit events');
+    $check((int) $events[0]->actor_id === (int) $requester->id
+        && (int) $events[1]->actor_id === (int) $finance->id,
+        'audit records distinct requester and approver');
+    Sanctum::actingAs($requester, ['*']);
+    $requester->revokePermissionTo($approve);
+    [$status] = $call('GET', "refund-requests/{$refund->id}/audit");
+    $check($status === 403, 'non-finance requester cannot read refund audit');
     echo "ALL REFUND APPROVAL HTTP CHECKS PASSED (rolled back)\n";
 } finally {
     DB::rollBack();
