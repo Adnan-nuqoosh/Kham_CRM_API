@@ -80,6 +80,26 @@ try {
         && (float) $order->grand_total === 130.0
         && (int) $stock->fresh()->reserved === 1,
         'approved matching server tax creates consistent order and reserves once');
+    foreach ([
+        ['shipping_total' => -1],
+        ['shipping_total' => 'INF'],
+        ['tax_total' => -1],
+        ['tax_total' => 'NaN'],
+    ] as $invalid) {
+        $bad = array_replace($base, ['shipping_mode' => 'manual',
+            'shipping_total' => 0, 'tax_total' => 0], $invalid);
+        $field = array_key_first($invalid);
+        $before = Order::count();
+        $reserved = (int) $stock->fresh()->reserved;
+        try {
+            $service->create($bad);
+            throw new RuntimeException('FAIL: invalid manual ' . $field . ' accepted');
+        } catch (ValidationException $e) {
+            $check(isset($e->errors()[$field]) && Order::count() === $before
+                && (int) $stock->fresh()->reserved === $reserved,
+                'invalid manual ' . $field . ' rejected without stock mutation');
+        }
+    }
     echo "ALL CONFIGURED ORDER TAX CHECKS PASSED (rolled back)\n";
 } finally {
     config()->set('commerce.configured_shipping_orders_enabled',$originalFlag);
