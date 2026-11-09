@@ -120,7 +120,8 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 (string) $order->grand_total,
                 $redirect,
                 $data['idempotency_key'],
-                $data['payment_method'] ?? null
+                $data['payment_method'] ?? null,
+                $reservation['order_number']
             );
         } catch (\Throwable $e) {
             DB::table('myfatoorah_checkout_reservations')
