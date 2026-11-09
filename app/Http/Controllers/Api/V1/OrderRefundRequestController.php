@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderRefundRequest;
+use App\Models\RefundAuditEvent;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,12 @@ class OrderRefundRequestController extends Controller
     {
         return ApiResponse::success(OrderRefundRequest::where('order_id', $order->id)->latest('id')->get(),
             'Refund requests fetched.', 'REFUND_REQUEST_LIST');
+    }
+
+    public function audit(OrderRefundRequest $refund)
+    {
+        return ApiResponse::success(RefundAuditEvent::where('refund_request_id', $refund->id)
+            ->orderBy('id')->get(), 'Refund audit events fetched.', 'REFUND_AUDIT_LIST');
     }
 
     public function store(Request $request, Order $order)
@@ -37,11 +44,15 @@ class OrderRefundRequestController extends Controller
                 || (string) $payments->first()->currency_code !== (string) $locked->currency_code) {
                 throw ValidationException::withMessages(['payment' => ['Exactly one matching settled payment is required.']]);
             }
-            return OrderRefundRequest::create([
+            $created = OrderRefundRequest::create([
                 'order_id' => $locked->id, 'payment_id' => $payments->first()->id,
                 'amount' => $locked->grand_total, 'currency_code' => $locked->currency_code,
                 'reason' => $data['reason'], 'requested_by' => $request->user()->id,
             ]);
+            RefundAuditEvent::create(['refund_request_id' => $created->id,
+                'actor_id' => $request->user()->id, 'event_type' => 'requested',
+                'from_status' => null, 'to_status' => 'pending_approval']);
+            return $created;
         }, 5);
         return ApiResponse::success($refund, 'Refund requested; payment unchanged and no provider refund initiated.',
             'REFUND_REQUEST_CREATED', 201);
@@ -71,6 +82,9 @@ class OrderRefundRequestController extends Controller
                 'approved_by' => $request->user()->id,
                 'approved_at' => now(),
             ])->save();
+            RefundAuditEvent::create(['refund_request_id' => $locked->id,
+                'actor_id' => $request->user()->id, 'event_type' => 'finance_approved',
+                'from_status' => 'pending_approval', 'to_status' => 'approved_awaiting_provider']);
             return $locked->fresh();
         }, 5);
         return ApiResponse::success($approved,
