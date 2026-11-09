@@ -1,0 +1,190 @@
+<?php
+/**
+ * Local-only mocked hosted payment initiation regression.
+ * Run: php scripts/local_myfatoorah_hosted_checkout_regression.php
+ * No real gateway requests; all database writes are rolled back.
+ */
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+$app = require dirname(__DIR__) . '/bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
+use App\Models\Customer;
+use App\Models\Market;
+use App\Models\Order;
+use App\Services\MyFatoorahV3Client;
+use App\Services\OrderService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+$host = strtolower((string) config('database.connections.mysql.host', ''));
+if (!app()->environment('local') || config('database.default') !== 'mysql'
+    || !in_array($host, ['127.0.0.1', 'localhost'], true)
+    || DB::connection()->getDatabaseName() !== 'kham_crm_api') {
+    fwrite(STDERR, "STOP: Requires APP_ENV=local and local MySQL kham_crm_api.\n");
+    exit(2);
+}
+$market = Market::where('code', 'AE')->first();
+$warehouse = DB::table('warehouses')->where('code', 'EG-01')->first();
+$stock = $warehouse ? DB::table('inventory_stocks')
+    ->where('warehouse_id', $warehouse->id)
+    ->whereRaw('(on_hand - reserved - damaged) >= 1')->first() : null;
+$variant = $stock ? DB::table('product_variants')->where('id', $stock->variant_id)->first() : null;
+if (!$market || !$warehouse || !$stock || !$variant) {
+    fwrite(STDERR, "STOP: Requires AE market, EG-01 warehouse and stocked variant.\n");
+    exit(2);
+}
+$assert = static function (bool $condition, string $name): void {
+    if (!$condition) throw new RuntimeException('FAIL: ' . $name);
+    echo 'PASS: ' . $name . PHP_EOL;
+};
+$tables = ['orders', 'order_items', 'customers', 'payments', 'inventory_movements'];
+$counts = static function () use ($tables): array {
+    $result = [];
+    foreach ($tables as $table) $result[$table] = DB::table($table)->count();
+    return $result;
+};
+$before = $counts();
+$stockBefore = DB::table('inventory_stocks')->where('id', $stock->id)->first();
+$original = [
+    'sandbox' => config('commerce.myfatoorah_sandbox_enabled'),
+    'hosted' => config('commerce.myfatoorah_sandbox_hosted_checkout_enabled'),
+    'token' => config('commerce.myfatoorah_sandbox_token'),
+    'redirect' => config('commerce.myfatoorah_sandbox_redirect_url'),
+];
+$fake = static function (array $data, int $status = 200, bool $success = true): void {
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::fake(['apitest.myfatoorah.com/v3/payments' =>
+        Http::response(['IsSuccess' => $success, 'Data' => $data], $status)]);
+    Http::preventStrayRequests();
+};
+$invoke = static function (Order $order, array $body = []) use ($app): array {
+    $body += ['idempotency_key' => 'sandbox_' . Str::random(24)];
+    $request = Request::create('/api/v1/orders/' . $order->id
+        . '/payments/myfatoorah/sandbox-hosted', 'POST', $body, [], [],
+        ['HTTP_ACCEPT' => 'application/json']);
+    $request->setContainer($app);
+    $request->setRedirector($app->make('redirect'));
+    $response = $app->make(LocalMyFatoorahHostedCheckoutController::class)(
+        $request, $order, $app->make(MyFatoorahV3Client::class));
+    return [$response->getStatusCode(), $response->getData(true)];
+};
+$exit = 0;
+DB::beginTransaction();
+try {
+    config([
+        'commerce.myfatoorah_sandbox_enabled' => true,
+        'commerce.myfatoorah_sandbox_hosted_checkout_enabled' => true,
+        'commerce.myfatoorah_sandbox_token' => 'mock-token-not-real',
+        'commerce.myfatoorah_sandbox_redirect_url' => 'https://example.invalid/sandbox/return',
+    ]);
+    DB::table('product_market_prices')->updateOrInsert(
+        ['variant_id' => $variant->id, 'market_id' => $market->id],
+        ['currency_id' => $market->currency_id, 'price' => 115,
+            'compare_at_price' => null, 'starts_at' => null, 'ends_at' => null,
+            'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]
+    );
+    $customer = Customer::create([
+        'first_name' => 'Hosted Regression',
+        'email' => 'hosted-' . Str::random(14) . '@example.invalid',
+        'phone' => '+971501234567', 'marketing_opt_in' => false,
+    ]);
+    $newOrder = static fn () => app(OrderService::class)->create([
+        'market_id' => $market->id, 'customer_id' => $customer->id,
+        'items' => [['variant_id' => $variant->id, 'quantity' => 1]],
+        'shipping_mode' => 'manual', 'shipping_total' => 0, 'tax_total' => 0,
+    ]);
+    $order = $newOrder();
+    $url = 'https://example.invalid/sandbox/pay/' . Str::random(20);
+    $invoice = (string) random_int(100000000, 999999999);
+    $fake(['InvoiceId' => $invoice, 'PaymentURL' => $url]);
+    [$status, $body] = $invoke($order);
+    $assert($status === 201 && data_get($body, 'code') === 'SANDBOX_HOSTED_PAYMENT_CREATED',
+        'Hosted payment initiated with mocked provider');
+    $payment = $order->payments()->sole();
+    $assert($payment->transaction_reference === $invoice
+        && $payment->status === PaymentStatus::Pending->value
+        && $payment->amount === $order->grand_total
+        && $payment->currency_code === $order->currency_code,
+        'Provider invoice and server-side order amount stored pending');
+    $assert(data_get($body, 'data.payment_url') === $url
+        && $order->fresh()->payment_status === PaymentStatus::Pending,
+        'Payment URL returned without marking order paid');
+
+    try {
+        $invoke($order);
+        throw new RuntimeException('FAIL: Duplicate payment attempt was allowed');
+    } catch (ValidationException $e) {
+        $assert($order->payments()->count() === 1,
+            'Duplicate initiation blocked without a second payment');
+    }
+
+    $failed = $newOrder();
+    $fake([], 503, false);
+    try {
+        $invoke($failed);
+        throw new RuntimeException('FAIL: Provider failure was accepted');
+    } catch (RuntimeException $e) {
+        if (str_starts_with($e->getMessage(), 'FAIL:')) throw $e;
+        $assert($failed->payments()->count() === 0,
+            'Provider 503 creates no payment attempt');
+    }
+
+    $invalid = $newOrder();
+    $fake(['InvoiceId' => '', 'PaymentURL' => $url]);
+    try {
+        $invoke($invalid);
+        throw new RuntimeException('FAIL: Missing invoice was accepted');
+    } catch (RuntimeException $e) {
+        if (str_starts_with($e->getMessage(), 'FAIL:')) throw $e;
+        $assert($invalid->payments()->count() === 0,
+            'Missing provider invoice creates no payment attempt');
+    }
+
+    $cancelled = $newOrder();
+    $cancelled->forceFill(['status' => OrderStatus::Cancelled])->save();
+    try {
+        $invoke($cancelled);
+        throw new RuntimeException('FAIL: Cancelled order was accepted');
+    } catch (ValidationException $e) {
+        $assert($cancelled->payments()->count() === 0,
+            'Cancelled order cannot initiate hosted payment');
+    }
+
+    config(['commerce.myfatoorah_sandbox_hosted_checkout_enabled' => false]);
+    try {
+        $invoke($newOrder());
+        throw new RuntimeException('FAIL: Disabled checkout was accepted');
+    } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+        $assert(true, 'Hosted checkout disabled by default flag');
+    }
+    echo "ALL HOSTED CHECKOUT CHECKS PASSED; rolling back fixtures.\n";
+} catch (Throwable $e) {
+    $exit = 1;
+    fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
+} finally {
+    DB::rollBack();
+    config([
+        'commerce.myfatoorah_sandbox_enabled' => $original['sandbox'],
+        'commerce.myfatoorah_sandbox_hosted_checkout_enabled' => $original['hosted'],
+        'commerce.myfatoorah_sandbox_token' => $original['token'],
+        'commerce.myfatoorah_sandbox_redirect_url' => $original['redirect'],
+    ]);
+}
+$after = $counts();
+$restored = DB::table('inventory_stocks')->where('id', $stock->id)->first();
+if ($after !== $before || (int) $restored->reserved !== (int) $stockBefore->reserved
+    || (int) $restored->on_hand !== (int) $stockBefore->on_hand) {
+    fwrite(STDERR, "FAIL: Rollback did not restore database counts or stock.\n");
+    $exit = 1;
+} else {
+    echo "PASS: Database fixtures and Egypt stock restored after rollback.\n";
+}
+exit($exit);
