@@ -3,9 +3,9 @@ info:
   title: KHAM Commerce OS API
   version: 1.0.0
   description: |
-    Full Laravel route/method inventory with selectively reviewed contracts.
-    Operations marked x-documentation-status: route-inventory-only are placeholders,
-    not validated request/response contracts. See docs/API_DOCUMENTATION.md.
+    Laravel API route/method inventory and documented request/response contracts.
+    Contract accuracy requires ongoing review against controller behavior and local tests.
+    See docs/API_DOCUMENTATION.md.
 servers:
   - url: http://localhost
     description: Local XAMPP (replace with your own base URL)
@@ -260,6 +260,7 @@ paths:
       summary: 'Active localized quiz questions and options'
       responses:
         '200': {description: 'RITUAL_QUIZ'}
+        '500': {description: 'Unexpected server error'}
 
   /api/v1/storefront/ritual-quiz/recommendations:
     post:
@@ -313,6 +314,7 @@ paths:
       summary: Paginated published rituals with localized content
       responses:
         '200': {description: 'STOREFRONT_RITUALS; published rituals ordered by sort_order and id'}
+        '500': {description: 'Unexpected server error'}
 
   /api/v1/storefront/rituals/{slug}:
     parameters:
