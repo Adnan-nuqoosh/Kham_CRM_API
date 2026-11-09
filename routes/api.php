@@ -156,6 +156,8 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:orders.view');
         Route::post('/orders/{order}/refund-requests', [OrderRefundRequestController::class, 'store'])
             ->middleware('permission:orders.manage');
+        Route::get('/refund-requests/{refund}/audit', [OrderRefundRequestController::class, 'audit'])
+            ->middleware('permission:refunds.approve');
         Route::post('/refund-requests/{refund}/approve', [OrderRefundRequestController::class, 'approve'])
             ->middleware('permission:refunds.approve');
 
