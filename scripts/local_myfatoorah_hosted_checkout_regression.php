@@ -302,6 +302,30 @@ try {
             'Midflight amount change retains uncertain reservation without payment');
     }
 
+    // A webhook or another verified flow may settle the order while the
+    // hosted creation request is in flight. Never attach a pending attempt
+    // after the order has already become paid.
+    $midflightPaid = $newOrder();
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::fake(['apitest.myfatoorah.com/v3/payments' => static function () use ($midflightPaid, $url) {
+        DB::table('orders')->where('id', $midflightPaid->id)
+            ->update(['payment_status' => PaymentStatus::Paid->value, 'updated_at' => now()]);
+        return Http::response(['IsSuccess' => true, 'Data' => [
+            'InvoiceId' => (string) random_int(100000000, 999999999),
+            'PaymentURL' => $url,
+        ]], 200);
+    }]);
+    Http::preventStrayRequests();
+    try {
+        $invoke($midflightPaid);
+        throw new RuntimeException('FAIL: Midflight paid order attached another payment');
+    } catch (ValidationException $e) {
+        $assert($midflightPaid->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')
+                ->where('order_id', $midflightPaid->id)->value('status') === 'uncertain',
+            'Midflight paid order blocks a second pending attempt');
+    }
+
     $cancelled = $newOrder();
     $cancelled->forceFill(['status' => OrderStatus::Cancelled])->save();
     try {
