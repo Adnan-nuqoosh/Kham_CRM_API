@@ -19,8 +19,12 @@ use App\Http\Controllers\Api\V1\{
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahWebhookController;
 
 Route::prefix('v1')->group(function () {
+    // Disabled by default; controller also rejects non-local environments.
+    Route::post('/storefront/payments/myfatoorah/local-webhook', LocalMyFatoorahWebhookController::class)
+        ->middleware('throttle:storefront-test-order');
     Route::post('/storefront/checkout/test-order', LocalGuestCheckoutController::class)
         ->middleware('throttle:storefront-test-order');
     Route::post('/storefront/checkout/quote', PublicCheckoutQuoteController::class)
