@@ -39,7 +39,7 @@ try {
     ProductMarketPrice::create(['variant_id'=>$variant->id,'market_id'=>$market->id,
         'currency_id'=>$market->currency_id,'price'=>'100.0000','is_active'=>true]);
     $stock = InventoryStock::create(['warehouse_id'=>$warehouse->id,'variant_id'=>$variant->id,
-        'on_hand'=>10,'reserved'=>0,'damaged'=>0]);
+        'on_hand'=>30,'reserved'=>0,'damaged'=>0]);
     $payload = ['market_id'=>$market->id,
         'items'=>[['variant_id'=>$variant->id,'quantity'=>2]],
         'shipping_mode'=>'manual','shipping_total'=>0,'tax_total'=>0,
@@ -48,37 +48,37 @@ try {
     $orders = app(OrderService::class);
     $statuses = app(OrderStatusService::class);
     $cancelOrder = $orders->create($payload);
-    $check((int)$stock->fresh()->reserved===2 && (int)$stock->fresh()->on_hand===10,
+    $check((int)$stock->fresh()->reserved===2 && (int)$stock->fresh()->on_hand===30,
         'order creation reserves stock without deducting on-hand');
     $statuses->transition($cancelOrder,OrderStatus::Cancelled);
-    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===10,
+    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===30,
         'cancellation releases reservation without selling stock');
     $statuses->transition($cancelOrder,OrderStatus::Cancelled);
-    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===10,
+    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===30,
         'repeated cancellation does not release stock twice');
     try {
         $statuses->transition($cancelOrder,OrderStatus::Shipped);
         throw new RuntimeException('FAIL: cancelled order shipped');
     } catch (ValidationException $e) {
-        $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===10,
+        $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===30,
             'cancelled order cannot be shipped');
     }
     $shipOrder = $orders->create($payload);
     $statuses->transition($shipOrder,OrderStatus::Shipped);
-    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===8,
+    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===28,
         'shipment commits reserved stock exactly once');
     $statuses->transition($shipOrder,OrderStatus::Shipped);
-    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===8,
+    $check((int)$stock->fresh()->reserved===0 && (int)$stock->fresh()->on_hand===28,
         'repeated shipment cannot deduct stock twice');
     try {
         $statuses->transition($shipOrder,OrderStatus::Cancelled);
         throw new RuntimeException('FAIL: shipped order cancelled');
     } catch (ValidationException $e) {
-        $check((int)$stock->fresh()->on_hand===8,
+        $check((int)$stock->fresh()->on_hand===28,
             'shipped order cannot cancel and release consumed stock');
     }
     $statuses->transition($shipOrder,OrderStatus::Returned);
-    $check((int)$stock->fresh()->on_hand===8,
+    $check((int)$stock->fresh()->on_hand===28,
         'returned status does not automatically restock uninspected goods');
     foreach ([\App\Enums\PaymentStatus::Authorized, \App\Enums\PaymentStatus::Paid,
         \App\Enums\PaymentStatus::PartiallyRefunded, \App\Enums\PaymentStatus::Refunded] as $paymentState) {
