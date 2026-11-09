@@ -61,6 +61,9 @@ class ProductController extends Controller
                 $this->createOrUpdateVariant($product, $variantData, true);
             }
 
+            if ($request->exists('ingredient_ids')) {
+                $product->linkedIngredients()->sync($request->validated('ingredient_ids', []));
+            }
             $this->storeProductImages($product, $request, $storedPaths);
 
             DB::commit();
@@ -311,6 +314,7 @@ class ProductController extends Controller
     {
         return [
             'brand',
+            'linkedIngredients',
             'category',
             'variants.prices.market.currency',
             'variants.stocks.warehouse.market',
