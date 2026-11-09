@@ -28,12 +28,12 @@ $check = static function (bool $condition, string $description): void {
     }
     echo 'PASS: ' . $description . PHP_EOL;
 };
-$send = static function (array $payload) use ($kernel): array {
+$send = static function (array $payload, string $locale = '', string $acceptLanguage = '') use ($kernel): array {
     $request = Request::create(
-        'http://localhost/api/v1/storefront/checkout/quote',
+        'http://localhost/api/v1/storefront/checkout/quote' . ($locale !== '' ? '?locale=' . urlencode($locale) : ''),
         'POST', [], [], [],
         ['HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json',
-            'REMOTE_ADDR' => '127.0.0.1'],
+            'REMOTE_ADDR' => '127.0.0.1', 'HTTP_ACCEPT_LANGUAGE' => $acceptLanguage],
         json_encode($payload, JSON_THROW_ON_ERROR)
     );
     $response = $kernel->handle($request);
@@ -93,6 +93,25 @@ try {
         && ($quote['data']['is_final_payable_total'] ?? true) === false,
         'Internal rule ID hidden and estimate is not final payable');
     $check(str_contains((string) $cache, 'no-store'), 'Guest quote is not cached');
+
+    $check(($quote['data']['locale'] ?? null) === 'en',
+        'Guest quote defaults to English locale');
+    [$status, $arabicQuote] = $send($payload, 'ar');
+    $check($status === 200 && ($arabicQuote['data']['locale'] ?? null) === 'ar'
+        && ($arabicQuote['data']['subtotal'] ?? null) === ($quote['data']['subtotal'] ?? null)
+        && ($arabicQuote['data']['shipping']['shipping_total'] ?? null) === ($quote['data']['shipping']['shipping_total'] ?? null),
+        'Arabic locale preserves server pricing and shipping');
+    [$status, $headerQuote] = $send($payload, '', 'ar-SA,ar;q=0.9,en;q=0.8');
+    $check($status === 200 && ($headerQuote['data']['locale'] ?? null) === 'ar',
+        'Accept-Language resolves Arabic guest quote');
+    [$status, $overrideQuote] = $send($payload, 'en', 'ar-SA');
+    $check($status === 200 && ($overrideQuote['data']['locale'] ?? null) === 'en',
+        'Explicit English locale overrides Arabic header');
+    [$status, $invalidQuote] = $send($payload, 'xx', 'ar-SA');
+    $check($status === 200 && ($invalidQuote['data']['locale'] ?? null) === 'en'
+        && ($invalidQuote['data']['is_final_payable_total'] ?? true) === false,
+        'Unsupported locale safely falls back without enabling payment');
+
 
     $badPrice = $payload;
     $badPrice['items'][0]['unit_price'] = 0.01;
