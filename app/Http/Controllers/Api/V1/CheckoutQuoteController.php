@@ -55,7 +55,7 @@ class CheckoutQuoteController extends Controller
             $netSubtotal
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
-        $taxReadiness = app(MarketTaxQuoteService::class)->readiness($market);
+        $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($netSubtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
         return ApiResponse::success([
             'market_id' => $market->id,
             'currency_code' => $market->currency->code,
@@ -65,7 +65,8 @@ class CheckoutQuoteController extends Controller
             'shipping' => $shippingQuote,
             'total_before_tax' => number_format($netSubtotal + $shippingTotal, 4, '.', ''),
             'tax_status' => $taxReadiness['tax_status'],
+            'tax_total' => $taxReadiness['tax_total'],
             'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
-        ], 'Provisional checkout quote; tax and final payable amount are not configured.', 'CHECKOUT_QUOTE');
+        ], 'Provisional checkout quote; tax preview is non-binding and final payable remains disabled.', 'CHECKOUT_QUOTE');
     }
 }
