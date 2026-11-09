@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: KHAM Commerce OS API
+  version: 1.0.0
+  description: |
+    Phase 1 OpenAPI contract for the verified storefront and CRM content modules.
+    This is a curated subset, not a complete inventory of all Laravel routes.
+    See docs/API_DOCUMENTATION.md for route inventory and coverage checks.
+servers:
+  - url: http://localhost
+    description: Local XAMPP (replace with your own base URL)
+tags:
+  - name: Homepage
+  - name: Partners
+  - name: Newsletter
+security: []
+paths:
+  /api/v1/storefront/homepage:
+    get:
+      tags: [Homepage]
+      summary: Published homepage sections in English or Arabic
+      parameters:
+        - in: query
+          name: locale
+          schema: {type: string, enum: [en, ar], default: en}
+      responses:
+        '200':
+          description: Published sections ordered by sort_order then id
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/PublicHomepageSection'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/homepage/sections:
+    get:
+      tags: [Homepage]
+      summary: CRM homepage section listing (products.view)
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: type
+          schema: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
+      responses:
+        '200': {description: Paginated section listing}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      tags: [Homepage]
+      summary: Create homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HomepageSectionInput'}
+      responses:
+        '201': {description: Section created}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/homepage/sections/{section}:
+    parameters:
+      - in: path
+        name: section
+        required: true
+        schema: {type: integer}
+    patch:
+      tags: [Homepage]
+      summary: Update homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HomepageSectionInput'}
+      responses:
+        '200': {description: Section updated}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Section not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [Homepage]
+      summary: Delete homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: Section deleted}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Section not found}
+  /api/v1/storefront/partners/apply:
+    post:
+      tags: [Partners]
+      summary: Submit partner application (rate limited)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PartnerApplicationInput'}
+      responses:
+        '201':
+          description: Application accepted; no applicant PII returned
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded}
+  /api/v1/partner-applications:
+    get:
+      tags: [Partners]
+      summary: CRM applications listing (customers.view)
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [pending, in_review, approved, rejected]}
+        - in: query
+          name: partner_type
+          schema: {type: string, enum: [retailer, distributor, influencer, corporate, other]}
+      responses:
+        '200': {description: Paginated applications including applicant PII; CRM only}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/v1/partner-applications/{application}:
+    parameters:
+      - in: path
+        name: application
+        required: true
+        schema: {type: integer}
+    get:
+      tags: [Partners]
+      summary: CRM application detail (customers.view)
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: Application details; CRM only}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Application not found}
+    patch:
+      tags: [Partners]
+      summary: Review application (customers.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [pending, in_review, approved, rejected]}
+                internal_notes: {type: string, nullable: true, maxLength: 5000}
+      responses:
+        '200': {description: Updated application with reviewer metadata}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Application not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/storefront/newsletter/subscribe:
+    post:
+      tags: [Newsletter]
+      summary: Subscribe or resubscribe email (rate limited)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+      responses:
+        '200': {description: Subscription request processed}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded}
+components:
+  securitySchemes:
+    sanctumBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Laravel Sanctum token
+  schemas:
+    ApiSuccess:
+      type: object
+      properties:
+        success: {type: boolean, example: true}
+        code: {type: string}
+        message: {type: string}
+        data: {nullable: true}
+        meta: {type: object}
+        errors: {type: object}
+    PublicHomepageSection:
+      type: object
+      properties:
+        key: {type: string}
+        type: {type: string}
+        title: {type: string}
+        subtitle: {type: string, nullable: true}
+        image_url: {type: string, nullable: true}
+        link_url: {type: string, nullable: true}
+        content: {type: object, nullable: true}
+        sort_order: {type: integer}
+    HomepageSectionInput:
+      type: object
+      description: All fields required for creation are key, type, title_en; PATCH accepts partial fields.
+      properties:
+        key: {type: string, maxLength: 100, pattern: '^[a-z0-9][a-z0-9_-]*$'}
+        type: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
+        title_en: {type: string, maxLength: 255}
+        title_ar: {type: string, nullable: true, maxLength: 255}
+        subtitle_en: {type: string, nullable: true, maxLength: 5000}
+        subtitle_ar: {type: string, nullable: true, maxLength: 5000}
+        image_url: {type: string, format: uri, nullable: true}
+        link_url: {type: string, nullable: true}
+        content: {type: object, nullable: true}
+        sort_order: {type: integer, minimum: 0, maximum: 1000000}
+        is_published: {type: boolean}
+    PartnerApplicationInput:
+      type: object
+      required: [contact_name, email, company_name, partner_type]
+      properties:
+        contact_name: {type: string, maxLength: 150}
+        email: {type: string, format: email, maxLength: 255}
+        phone: {type: string, nullable: true, maxLength: 50}
+        company_name: {type: string, maxLength: 200}
+        website: {type: string, format: uri, nullable: true, maxLength: 500}
+        partner_type: {type: string, enum: [retailer, distributor, influencer, corporate, other]}
+        message: {type: string, nullable: true, maxLength: 5000}
+  responses:
+    ValidationError:
+      description: Invalid request parameters (Laravel validation error)
+    Unauthenticated:
+      description: Bearer token missing or invalid
+    Forbidden:
+      description: Authenticated user lacks the required permission
