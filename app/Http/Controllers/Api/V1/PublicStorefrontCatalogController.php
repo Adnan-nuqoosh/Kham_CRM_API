@@ -86,6 +86,8 @@ class PublicStorefrontCatalogController extends Controller
             'name' => StorefrontLocale::text($product->name, $product->name_ar, $locale),
             'short_description' => StorefrontLocale::text($product->short_description, $product->short_description_ar, $locale),
             'description' => StorefrontLocale::text($product->description, $product->description_ar, $locale),
+            'ingredients' => StorefrontLocale::text($product->ingredients, $product->ingredients_ar, $locale),
+            'usage_instructions' => StorefrontLocale::text($product->usage_instructions, $product->usage_instructions_ar, $locale),
             'currency_code' => $market->currency->code,
             'variants' => $variants->map(fn ($v) => [
                 'id' => $v->id,
