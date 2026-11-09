@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
 use App\Http\Controllers\Api\V1\IngredientController;
+use App\Http\Controllers\Api\V1\RitualQuizController;
 use App\Http\Controllers\Api\V1\MarketTaxRuleController;
 use App\Http\Controllers\Api\V1\OrderRefundRequestController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
@@ -29,6 +30,8 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/ritual-quiz/questions', [RitualQuizController::class, 'questions'])->middleware('throttle:storefront-quote');
+    Route::post('/storefront/ritual-quiz/recommendations', [RitualQuizController::class, 'recommend'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/ingredients', [IngredientController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/ingredients/{slug}', [IngredientController::class, 'publicShow'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
@@ -63,6 +66,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/brands/{brand}', [CatalogController::class, 'showBrand']);
         });
 
+        Route::get('/ritual-quiz/questions', [RitualQuizController::class, 'adminIndex'])->middleware('permission:products.view');
+        Route::post('/ritual-quiz/questions', [RitualQuizController::class, 'storeQuestion'])->middleware('permission:products.manage');
+        Route::patch('/ritual-quiz/questions/{question}', [RitualQuizController::class, 'updateQuestion'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/questions/{question}/options', [RitualQuizController::class, 'storeOption'])->middleware('permission:products.manage');
+        Route::patch('/ritual-quiz/options/{option}', [RitualQuizController::class, 'updateOption'])->middleware('permission:products.manage');
+        Route::put('/ritual-quiz/options/{option}/products', [RitualQuizController::class, 'syncProducts'])->middleware('permission:products.manage');
         Route::get('/ingredients', [IngredientController::class, 'index'])->middleware('permission:products.view');
         Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show'])->middleware('permission:products.view');
         Route::post('/ingredients', [IngredientController::class, 'store'])->middleware('permission:products.manage');
