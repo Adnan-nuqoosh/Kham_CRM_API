@@ -45,8 +45,12 @@ try{
     $make(1,'pending','Pending Fixture');
     $make(2,'rejected','Rejected Fixture');
     [$status,$body]=$call($base);
+    if ($status !== 200 || ($body['data']['review_count'] ?? null) !== 1 || !is_numeric($body['data']['average_rating'] ?? null) || (float)$body['data']['average_rating'] !== 5.0) {
+        echo 'DEBUG approved summary HTTP='.$status.' response='.json_encode($body, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR)."\n";
+    }
     $check($status===200&&($body['data']['review_count']??null)===1
-        &&($body['data']['average_rating']??null)===5.0,'only approved reviews counted');
+        &&is_numeric($body['data']['average_rating']??null)
+        &&(float)$body['data']['average_rating']===5.0,'only approved reviews counted');
     $rows=$body['data']['reviews']??[];
     $check(count($rows)===1&&($rows[0]['id']??null)===$approved->id
         &&($rows[0]['reviewer_name']??null)==='Public Fixture',
