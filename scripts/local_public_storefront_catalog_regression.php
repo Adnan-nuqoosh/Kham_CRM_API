@@ -61,5 +61,37 @@ try{
     $check($status===404,'draft product detail hidden from guests');
     [$status]=$call('storefront/products?market_id=999999999');
     $check($status===422,'invalid market rejected');
+    $product->forceFill(['status'=>\App\Enums\ProductStatus::Active])->save();
+    $product->forceFill(['name_ar'=>null])->save();
+    [$status,$fallback]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=ar');
+    $check($status===200&&($fallback['data']['name']??null)==='English Fixture',
+        'missing Arabic name safely falls back to English');
+    $variant->forceFill(['is_active'=>false])->save();
+    [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===404,'inactive variant cannot make product publicly sellable');
+    $variant->forceFill(['is_active'=>true])->save();
+    $price=\App\Models\ProductMarketPrice::where('variant_id',$variant->id)
+        ->where('market_id',$market->id)->firstOrFail();
+    $price->forceFill(['is_active'=>false])->save();
+    [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===404,'inactive market price hides product detail');
+    $price->forceFill(['is_active'=>true,'starts_at'=>now()->addDay()])->save();
+    [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===404,'future price cannot publish product');
+    $price->forceFill(['starts_at'=>null,'ends_at'=>now()->subDay()])->save();
+    [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===404,'expired price cannot publish product');
+    $price->forceFill(['ends_at'=>null])->save();
+    $market->forceFill(['is_active'=>false])->save();
+    [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
+    $check($status===422,'inactive market cannot expose public product detail');
+    $market->forceFill(['is_active'=>true])->save();
+    [$status]=$call($base.'&page=0');
+    $check($status===422,'invalid pagination rejected');
+    $otherMarket=\App\Models\Market::whereKeyNot($market->id)->first();
+    if($otherMarket&&$otherMarket->is_active&&$otherMarket->currency?->is_active){
+        [$status]=$call('storefront/products/'.$product->id.'?market_id='.$otherMarket->id);
+        $check($status===404,'price in another market does not publish product');
+    }
     echo "ALL PUBLIC STOREFRONT CATALOG CHECKS PASSED (rolled back)\n";
 }finally{DB::rollBack();}
