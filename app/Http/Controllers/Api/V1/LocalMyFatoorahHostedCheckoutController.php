@@ -70,6 +70,15 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 $data['payment_method'] ?? null
             );
 
+            // Fail closed if the provider invoice is already linked to another attempt.
+            // A database uniqueness constraint is still required for cross-order races.
+            if (DB::table('payments')->where('provider', 'myfatoorah')
+                ->where('transaction_reference', $response['invoice_id'])->exists()) {
+                throw ValidationException::withMessages([
+                    'payment' => ['Provider invoice is already linked to a payment attempt.'],
+                ]);
+            }
+
             $payment = $locked->payments()->create([
                 'provider' => 'myfatoorah',
                 'method' => 'hosted',
