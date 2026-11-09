@@ -58,6 +58,8 @@ class PublicCheckoutQuoteController extends Controller
             ->keyBy('variant_id');
 
         $subtotal = 0.0;
+        $displayItems = [];
+        $locale = StorefrontLocale::resolve($request);
         foreach ($data['items'] as $item) {
             $variantId = (int) $item['variant_id'];
             $quantity = (int) $item['quantity'];
@@ -85,6 +87,12 @@ class PublicCheckoutQuoteController extends Controller
             }
 
             $subtotal += (float) $price->price * $quantity;
+            $displayItems[] = [
+                'variant_id' => $variantId,
+                'quantity' => $quantity,
+                'product_name' => StorefrontLocale::text($variant->product->name, $variant->product->name_ar, $locale),
+                'variant_title' => $variant->title,
+            ];
         }
 
         $shippingQuote = $shipping->quote(
@@ -100,7 +108,8 @@ class PublicCheckoutQuoteController extends Controller
         unset($shippingQuote['rule_id']);
 
         return ApiResponse::success([
-            'locale' => StorefrontLocale::resolve($request),
+            'locale' => $locale,
+            'items' => $displayItems,
             'market_id' => $market->id,
             'currency_code' => $market->currency->code,
             'subtotal' => number_format($subtotal, 4, '.', ''),
