@@ -199,7 +199,7 @@ try {
     $assert($status === 422, 'Provider external order reference mismatch rejected');
 
     // Transport failure must not cause settlement or receipt persistence.
-    Http::swap(new \\Illuminate\\Http\\Client\\Factory());
+    Http::swap(new \Illuminate\Http\Client\Factory());
     Http::fake(['apitest.myfatoorah.com/v3/payments/*' => Http::response(
         ['IsSuccess' => false], 503
     )]);
