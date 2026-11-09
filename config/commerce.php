@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'badges' => [
+        'new_days' => (int) env('STOREFRONT_BADGE_NEW_DAYS', 30),
+        'bestseller_lookback_days' => (int) env('STOREFRONT_BADGE_BESTSELLER_LOOKBACK_DAYS', 90),
+        'bestseller_min_delivered_units' => (int) env('STOREFRONT_BADGE_BESTSELLER_MIN_UNITS', 10),
+    ],
     // All EG, AE and SA storefront orders ship from the Egypt warehouse.
     // This is a warehouse code (not a market ID or a client-provided ID).
     'fulfillment_warehouse_code' => env('FULFILLMENT_WAREHOUSE_CODE', 'EG-01'),
