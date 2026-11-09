@@ -100,6 +100,34 @@ try {
                 'invalid manual ' . $field . ' rejected without stock mutation');
         }
     }
+    $quoteUser = User::create(['name'=>'Quote Tester',
+        'email'=>'quote-'.\Illuminate\Support\Str::random(14).'@example.invalid',
+        'password'=>\Illuminate\Support\Str::random(48)]);
+    $quoteUser->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate([
+        'name'=>'orders.manage','guard_name'=>'web']));
+    \Laravel\Sanctum\Sanctum::actingAs($quoteUser,['*']);
+    $kernel = app(\Illuminate\Contracts\Http\Kernel::class);
+    $req = \Illuminate\Http\Request::create('/api/v1/checkout/quote','POST',[
+        'market_id'=>$market->id,'items'=>[['variant_id'=>$variant->id,'quantity'=>1]],
+        'shipping_address'=>['country_code'=>'AE','city'=>'Dubai'],
+    ],[],[],['HTTP_ACCEPT'=>'application/json']);
+    $res = $kernel->handle($req);
+    try {
+        $body = json_decode($res->getContent(),true);
+        $check($res->getStatusCode()===200 && is_array($body),'authenticated quote succeeds');
+        $quote = $body['data']??[];
+        $check((float)($quote['subtotal']??-1)===(float)$order->subtotal
+            && (float)($quote['discount_total']??-1)===(float)$order->discount_total,
+            'quote subtotal and discount match order');
+        $check((float)($quote['shipping']['shipping_total']??-1)===(float)$order->shipping_total,
+            'quote shipping matches order');
+        $check((float)($quote['tax_total']??-1)===(float)$order->tax_total,
+            'quote tax matches order');
+        $check(abs((float)($quote['total_before_tax']??-1)+(float)($quote['tax_total']??-1)
+            -(float)$order->grand_total)<0.00001
+            && ($quote['is_final_payable_total']??null)===false,
+            'quote components reconcile while final payable stays disabled');
+    } finally { $kernel->terminate($req,$res); }
     echo "ALL CONFIGURED ORDER TAX CHECKS PASSED (rolled back)\n";
 } finally {
     config()->set('commerce.configured_shipping_orders_enabled',$originalFlag);
