@@ -321,12 +321,13 @@ paths:
 
   /api/v1/storefront/products:
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/products'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront]
+      summary: 'List active market-eligible storefront products'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
+
   /api/v1/storefront/products/{product}:
     parameters:
       - in: path
@@ -334,12 +335,13 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront]
+      summary: 'Active storefront product detail'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
+
   /api/v1/storefront/payments/myfatoorah/local-webhook:
     post:
       tags: ['storefront']
@@ -358,12 +360,13 @@ paths:
         '200': {description: Placeholder; actual success status and response schema require verification}
   /api/v1/storefront/checkout/quote:
     post:
-      tags: ['storefront']
-      summary: 'POST /storefront/checkout/quote'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront]
+      summary: 'Public checkout quote; not a final payable tax confirmation'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
+
   /api/v1/auth/forgot-password:
     post:
       tags: [Authentication]
@@ -445,36 +448,38 @@ paths:
 
   /api/v1/dashboard:
     get:
-      tags: ['dashboard']
-      summary: 'GET /dashboard'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: dashboard.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM dashboard aggregates'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/products:
     get:
-      tags: ['products']
-      summary: 'GET /products'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Paginated CRM product list'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['products']
-      summary: 'POST /products'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create CRM product'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/products/{product}:
     parameters:
       - in: path
@@ -482,76 +487,78 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['products']
-      summary: 'GET /products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM product detail'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['products']
-      summary: 'POST /products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update product using multipart form data'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     put:
-      tags: ['products']
-      summary: 'PUT /products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update product with JSON request'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
-      tags: ['products']
-      summary: 'PATCH /products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Partially update product with JSON request'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
-      tags: ['products']
-      summary: 'DELETE /products/{product}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Delete product'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/categories:
     get:
-      tags: ['categories']
-      summary: 'GET /categories'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM categories'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['categories']
-      summary: 'POST /categories'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create category'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/categories/{category}:
     parameters:
       - in: path
@@ -559,56 +566,58 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['categories']
-      summary: 'GET /categories/{category}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM category detail'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
-      tags: ['categories']
-      summary: 'PATCH /categories/{category}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update category'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
-      tags: ['categories']
-      summary: 'DELETE /categories/{category}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Delete category'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/brands:
     get:
-      tags: ['brands']
-      summary: 'GET /brands'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM brands'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['brands']
-      summary: 'POST /brands'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create brand'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/brands/{brand}:
     parameters:
       - in: path
@@ -616,35 +625,36 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['brands']
-      summary: 'GET /brands/{brand}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM brand detail'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     patch:
-      tags: ['brands']
-      summary: 'PATCH /brands/{brand}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update brand'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
-      tags: ['brands']
-      summary: 'DELETE /brands/{brand}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Delete brand'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/product-reviews:
     get:
       tags: [Product Reviews]
@@ -986,25 +996,26 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['categories']
-      summary: 'POST /categories/{category}/image'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Upload category image'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
-      tags: ['categories']
-      summary: 'DELETE /categories/{category}/image'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Remove category image'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/brands/{brand}/image:
     parameters:
       - in: path
@@ -1012,25 +1023,26 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['brands']
-      summary: 'POST /brands/{brand}/image'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Upload brand logo'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     delete:
-      tags: ['brands']
-      summary: 'DELETE /brands/{brand}/image'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Remove brand logo'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/products/{product}/images:
     parameters:
       - in: path
@@ -1038,15 +1050,16 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['products']
-      summary: 'POST /products/{product}/images'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Upload product images'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/products/{product}/images/{media}:
     parameters:
       - in: path
@@ -1059,59 +1072,64 @@ paths:
         required: true
         schema: {type: string}
     delete:
-      tags: ['products']
-      summary: 'DELETE /products/{product}/images/{media}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Remove product image'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/currencies:
     get:
-      tags: ['currencies']
-      summary: 'GET /currencies'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List currencies'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/markets:
     get:
-      tags: ['markets']
-      summary: 'GET /markets'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List markets'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/warehouses:
     get:
-      tags: ['warehouses']
-      summary: 'GET /warehouses'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: inventory.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List warehouses'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/prices/upsert:
     post:
-      tags: ['prices']
-      summary: 'POST /prices/upsert'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: pricing.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create or update market price for product variant'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/inventory:
     get:
       tags: [CRM]
@@ -1357,15 +1375,16 @@ paths:
 
   /api/v1/checkout/quote:
     post:
-      tags: ['checkout']
-      summary: 'POST /checkout/quote'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM checkout quote without configured tax finalization'
+      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
+      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Success response; exact response contract pending verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/market-tax-rules:
     get:
       tags: [CRM]
