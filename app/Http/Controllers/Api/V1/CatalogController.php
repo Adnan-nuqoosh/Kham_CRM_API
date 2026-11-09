@@ -9,6 +9,7 @@ use App\Models\Currency;
 use App\Models\Market;
 use App\Models\Warehouse;
 use App\Support\ApiResponse;
+use App\Support\StorefrontLocale;
 use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -43,7 +44,7 @@ class CatalogController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            return ApiResponse::success($categories, 'Category tree fetched.', 'CATEGORY_TREE');
+            return ApiResponse::success($categories->map(fn (Category $category) => $this->localizedCategory($category, $request))->all(), 'Category tree fetched.', 'CATEGORY_TREE');
         }
 
         $query = Category::query()->with(['parent.parent']);
@@ -55,7 +56,7 @@ class CatalogController extends Controller
             ->paginate(PaginationMeta::perPage($request, 20));
 
         return ApiResponse::success(
-            $paginator->items(),
+            collect($paginator->items())->map(fn (Category $category) => $this->localizedCategory($category, $request))->all(),
             'Categories fetched.',
             'CATEGORY_LIST',
             200,
@@ -63,10 +64,10 @@ class CatalogController extends Controller
         );
     }
 
-    public function showCategory(Category $category)
+    public function showCategory(Request $request, Category $category)
     {
         return ApiResponse::success(
-            $category->load(['parent', 'children.children']),
+            $this->localizedCategory($category->load(['parent', 'children.children']), $request),
             'Category fetched.',
             'CATEGORY_DETAIL'
         );
@@ -140,6 +141,7 @@ class CatalogController extends Controller
             $search = trim((string) $request->search);
             $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('name_ar', 'like', "%{$search}%")
                 ->orWhere('slug', 'like', "%{$search}%")
                 ->orWhere('origin_country', 'like', "%{$search}%")
             );
@@ -157,7 +159,7 @@ class CatalogController extends Controller
             ->paginate(PaginationMeta::perPage($request, 20));
 
         return ApiResponse::success(
-            $paginator->items(),
+            collect($paginator->items())->map(fn (Brand $brand) => $this->localizedBrand($brand, $request))->all(),
             'Brands fetched.',
             'BRAND_LIST',
             200,
@@ -165,9 +167,9 @@ class CatalogController extends Controller
         );
     }
 
-    public function showBrand(Brand $brand)
+    public function showBrand(Request $request, Brand $brand)
     {
-        return ApiResponse::success($brand, 'Brand fetched.', 'BRAND_DETAIL');
+        return ApiResponse::success($this->localizedBrand($brand, $request), 'Brand fetched.', 'BRAND_DETAIL');
     }
 
     public function storeBrand(Request $request)
@@ -227,6 +229,30 @@ class CatalogController extends Controller
     public function warehouses()
     {
         return ApiResponse::success(Warehouse::with('market.currency')->orderBy('name')->get());
+    }
+
+    private function localizedCategory(Category $category, Request $request): array
+    {
+        $data = array_merge($category->toArray(), StorefrontLocale::catalogFields(
+            $category, StorefrontLocale::resolve($request), ['name', 'description']
+        ));
+        foreach (['parent', 'children'] as $relation) {
+            if (!$category->relationLoaded($relation)) {
+                continue;
+            }
+            $related = $category->getRelation($relation);
+            $data[$relation] = $relation === 'children'
+                ? $related->map(fn (Category $child) => $this->localizedCategory($child, $request))->all()
+                : ($related ? $this->localizedCategory($related, $request) : null);
+        }
+        return $data;
+    }
+
+    private function localizedBrand(Brand $brand, Request $request): array
+    {
+        return array_merge($brand->toArray(), StorefrontLocale::catalogFields(
+            $brand, StorefrontLocale::resolve($request), ['name', 'description']
+        ));
     }
 
     private function applyCategoryFilters($query, Request $request): void
