@@ -12,6 +12,8 @@ servers:
 tags:
   - name: Authentication
     description: CRM authentication and password recovery
+  - name: Community
+    description: Public config-backed community page
   - name: CRM
     description: Authenticated commerce administration
   - name: Homepage
@@ -40,6 +42,46 @@ tags:
     description: Public ritual content
 security: []
 paths:
+  /api/v1/storefront/community:
+    get:
+      operationId: get_storefront_community
+      tags: [Community]
+      summary: Public community page content from approved configuration
+      description: 'Static/config-backed phase; sections and links are empty until approved content is supplied. No member submissions or CRM editor.'
+      parameters:
+        - in: query
+          name: locale
+          schema: {type: string, enum: [en, ar], default: en}
+      responses:
+        '200':
+          description: 'Community page content; STOREFRONT_COMMUNITY'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [locale, title, intro, sections, links]
+                        properties:
+                          locale: {type: string, enum: [en, ar]}
+                          title: {type: string}
+                          intro: {type: string}
+                          sections:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key: {type: string, nullable: true}
+                                title: {type: string}
+                                body: {type: string}
+                                image_url: {type: string, nullable: true}
+                                link_url: {type: string, nullable: true}
+                          links: {type: array, items: {type: object}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
   /api/v1/storefront/homepage:
     get:
       operationId: get_storefront_homepage
