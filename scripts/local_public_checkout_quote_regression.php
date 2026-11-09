@@ -94,6 +94,25 @@ try {
         'Internal rule ID hidden and estimate is not final payable');
     $check(str_contains((string) $cache, 'no-store'), 'Guest quote is not cached');
 
+    $product = DB::table('products')->where('id', $variant->product_id)->firstOrFail();
+    DB::table('products')->where('id', $product->id)->update(['name_ar' => 'منتج تجريبي']);
+    [$status, $arabicNamed] = $send($payload, 'ar');
+    $check($status === 200
+        && ($arabicNamed['data']['items'][0]['product_name'] ?? null) === 'منتج تجريبي'
+        && (int) ($arabicNamed['data']['items'][0]['variant_id'] ?? 0) === (int) $variant->id
+        && (int) ($arabicNamed['data']['items'][0]['quantity'] ?? 0) === 1,
+        'Arabic quote includes localized product name and correct item identity');
+    [$status, $englishNamed] = $send($payload, 'en');
+    $check($status === 200
+        && ($englishNamed['data']['items'][0]['product_name'] ?? null) === $product->name
+        && ($englishNamed['data']['subtotal'] ?? null) === ($arabicNamed['data']['subtotal'] ?? null),
+        'English quote retains original name and same server subtotal');
+    DB::table('products')->where('id', $product->id)->update(['name_ar' => null]);
+    [$status, $fallbackNamed] = $send($payload, 'ar');
+    $check($status === 200
+        && ($fallbackNamed['data']['items'][0]['product_name'] ?? null) === $product->name,
+        'Missing Arabic product name falls back to English');
+
     $check(($quote['data']['locale'] ?? null) === 'en',
         'Guest quote defaults to English locale');
     [$status, $arabicQuote] = $send($payload, 'ar');
