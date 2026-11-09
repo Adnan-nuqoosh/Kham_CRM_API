@@ -78,8 +78,16 @@ final class MyFatoorahV3Client
             throw new RuntimeException('MyFatoorah returned an invalid hosted payment URL.');
         }
 
+        // Webhook matching depends on a valid, persisted provider invoice ID.
+        // Never return a payment URL if the invoice cannot be reconciled later.
+        $invoiceId = is_array($data) ? ($data['InvoiceId'] ?? null) : null;
+        if ((!is_string($invoiceId) && !is_int($invoiceId))
+            || !preg_match('/^[0-9]{1,64}$/D', (string) $invoiceId)) {
+            throw new RuntimeException('MyFatoorah returned an invalid invoice ID.');
+        }
+
         return [
-            'invoice_id' => (string) ($data['InvoiceId'] ?? ''),
+            'invoice_id' => (string) $invoiceId,
             'payment_url' => $url,
             'payment_completed' => ($data['PaymentCompleted'] ?? null) === true,
         ];
