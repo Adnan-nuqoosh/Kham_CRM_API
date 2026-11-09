@@ -19,14 +19,14 @@ Environment: Windows XAMPP, Laravel 12, local MySQL `kham_crm_api`
 - CRM-authenticated, `orders.manage` guarded hosted checkout; server-controlled amount and redirect, invoice ID stored on a pending payment attempt.
 - Signed webhook verifies event, reconciles provider invoice/payment/order/amount/currency, and atomically stores receipt plus paid transition.
 - Idempotent callback, cancelled-order guard, stock unaffected.
-- Application-level guard rejects reuse of the same MyFatoorah invoice across orders; **database uniqueness under concurrent transactions is not yet guaranteed**.
+- Application-level guard rejects reuse of the same MyFatoorah invoice across orders. **Local database unique index migration applied successfully** (`payments_provider_transaction_reference_unique`), and hosted 9/9 plus end-to-end 22/22 checks passed afterward. Live VPS database has not been migrated.
 - Hosted checkout is disabled by default: `MYFATOORAH_SANDBOX_HOSTED_CHECKOUT_ENABLED=false`. Sandbox gateway disabled by default.
 - Local guest checkout remains a separate **mock_fatoora** flow; it is not connected to the hosted gateway.
 
 ## Next milestones (not yet verified)
 
 1. **COMPLETE (mocked):** End-to-end hosted initiation → signed webhook → paid order/payment/receipt regression at `scripts/local_myfatoorah_end_to_end_regression.php`; **22/22 local checks passed**.
-2. **NEXT:** Implement database-enforced invoice uniqueness after auditing existing payment rows and indexes; test safe, additive migration against existing local data. Review initiation idempotency and concurrency, crash recovery if provider accepts payment but local DB write fails; avoid holding DB row locks across network calls. Do not treat the current controller check as concurrency-safe.
+2. **PARTIAL:** Database-enforced provider/reference uniqueness migration applied and local regressions passed. **NEXT:** Test database collision behavior explicitly; review initiation idempotency and concurrency, crash recovery if provider accepts payment but local DB write fails; avoid holding DB row locks across network calls.
 3. Confirm provider V3 request/response contract and redirect/external identifier requirements against current sandbox documentation, then test with real sandbox credentials securely (never commit secrets).
 4. Decide production architecture: public checkout ownership/authentication, market/currency/tax readiness, reliable webhook processing, retry/reconciliation, logs and operational controls. **No production enablement until these are complete.**
 
