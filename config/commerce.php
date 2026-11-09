@@ -11,4 +11,7 @@ return [
     // Sandbox-only service; no checkout route or payment status mutation yet.
     'myfatoorah_sandbox_enabled' => env('MYFATOORAH_SANDBOX_ENABLED', false),
     'myfatoorah_sandbox_token' => env('MYFATOORAH_SANDBOX_TOKEN'),
+    // Local-only webhook harness; disabled unless explicitly opted in.
+    'myfatoorah_sandbox_webhook_enabled' => env('MYFATOORAH_SANDBOX_WEBHOOK_ENABLED', false),
+    'myfatoorah_webhook_secret' => env('MYFATOORAH_WEBHOOK_SECRET'),
 ];
