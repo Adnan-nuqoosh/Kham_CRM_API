@@ -1049,58 +1049,106 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/inventory:
     get:
-      tags: ['inventory']
-      summary: 'GET /inventory'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: inventory.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Inventory stocks with product and warehouse relations'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: warehouse_id
+          schema: {type: string}
+        - in: query
+          name: low_stock
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'INVENTORY_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/inventory/movements:
     get:
-      tags: ['inventory']
-      summary: 'GET /inventory/movements'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: inventory.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Paginated stock movement ledger'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: variant_id
+          schema: {type: string}
+        - in: query
+          name: warehouse_id
+          schema: {type: string}
+        - in: query
+          name: type
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'INVENTORY_MOVEMENTS'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/inventory/adjust:
     post:
-      tags: ['inventory']
-      summary: 'POST /inventory/adjust'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: inventory.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Adjust on-hand stock transactionally; reject negative resulting stock'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                variant_id: {description: 'Validated server-side'}
+                warehouse_id: {description: 'Validated server-side'}
+                quantity_delta: {description: 'Validated server-side'}
+                reason: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'INVENTORY_ADJUSTED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/customers:
     get:
-      tags: ['customers']
-      summary: 'GET /customers'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Search customers with order counts and sums'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'CUSTOMER_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
-      tags: ['customers']
-      summary: 'POST /customers'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create customer record'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                first_name: {description: 'Validated server-side'}
+                last_name: {description: 'Validated server-side'}
+                email: {description: 'Validated server-side'}
+                phone: {description: 'Validated server-side'}
+                status: {description: 'Validated server-side'}
+                tags: {description: 'Validated server-side'}
+                notes: {description: 'Validated server-side'}
+                marketing_opt_in: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'CUSTOMER_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/customers/{customer}:
     parameters:
       - in: path
@@ -1108,56 +1156,88 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['customers']
-      summary: 'GET /customers/{customer}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Get customer with addresses and order items'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Customer detail'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     patch:
-      tags: ['customers']
-      summary: 'PATCH /customers/{customer}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update customer fields'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                first_name: {description: 'Validated server-side'}
+                last_name: {description: 'Validated server-side'}
+                email: {description: 'Validated server-side'}
+                phone: {description: 'Validated server-side'}
+                status: {description: 'Validated server-side'}
+                tags: {description: 'Validated server-side'}
+                notes: {description: 'Validated server-side'}
+                marketing_opt_in: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'CUSTOMER_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: ['customers']
-      summary: 'DELETE /customers/{customer}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Delete customer'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'CUSTOMER_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/coupons:
     get:
-      tags: ['coupons']
-      summary: 'GET /coupons'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: coupons.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Paginated coupons'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'COUPON_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
-      tags: ['coupons']
-      summary: 'POST /coupons'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: coupons.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create coupon; code normalized to uppercase'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                code: {description: 'Validated server-side'}
+                name: {description: 'Validated server-side'}
+                type: {description: 'Validated server-side'}
+                value: {description: 'Validated server-side'}
+                min_spend: {description: 'Validated server-side'}
+                max_discount: {description: 'Validated server-side'}
+                starts_at: {description: 'Validated server-side'}
+                ends_at: {description: 'Validated server-side'}
+                max_uses: {description: 'Validated server-side'}
+                max_uses_per_customer: {description: 'Validated server-side'}
+                rules: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'COUPON_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/coupons/{coupon}:
     parameters:
       - in: path
@@ -1165,35 +1245,51 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['coupons']
-      summary: 'GET /coupons/{coupon}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: coupons.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Get coupon detail'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'COUPON_DETAIL'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     patch:
-      tags: ['coupons']
-      summary: 'PATCH /coupons/{coupon}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: coupons.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update coupon fields'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                name: {description: 'Validated server-side'}
+                type: {description: 'Validated server-side'}
+                value: {description: 'Validated server-side'}
+                min_spend: {description: 'Validated server-side'}
+                max_discount: {description: 'Validated server-side'}
+                starts_at: {description: 'Validated server-side'}
+                ends_at: {description: 'Validated server-side'}
+                max_uses: {description: 'Validated server-side'}
+                max_uses_per_customer: {description: 'Validated server-side'}
+                rules: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'COUPON_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: ['coupons']
-      summary: 'DELETE /coupons/{coupon}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: coupons.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Delete coupon'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'COUPON_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/checkout/quote:
     post:
       tags: ['checkout']
@@ -1207,15 +1303,15 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/market-tax-rules:
     get:
-      tags: ['market-tax-rules']
-      summary: 'GET /market-tax-rules'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List market tax policies'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'MARKET_TAX_RULE_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/markets/{market}/tax-rule:
     parameters:
       - in: path
@@ -1223,15 +1319,26 @@ paths:
         required: true
         schema: {type: string}
     put:
-      tags: ['markets']
-      summary: 'PUT /markets/{market}/tax-rule'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Save tax policy; changes revoke prior approval'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                rate_percent: {description: 'Validated server-side'}
+                calculation_method: {description: 'Validated server-side'}
+                tax_shipping: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'MARKET_TAX_RULE_SAVED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/markets/{market}/tax-rule/approve:
     parameters:
       - in: path
@@ -1239,36 +1346,61 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['markets']
-      summary: 'POST /markets/{market}/tax-rule/approve'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: tax.approve.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Approve configured tax policy; final payable remains disabled'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                confirm: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'MARKET_TAX_RULE_APPROVED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/shipping-rules:
     get:
-      tags: ['shipping-rules']
-      summary: 'GET /shipping-rules'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List market shipping rules'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'SHIPPING_RULE_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
-      tags: ['shipping-rules']
-      summary: 'POST /shipping-rules'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create unique market/city shipping rule; city may be *'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                market_id: {description: 'Validated server-side'}
+                city: {description: 'Validated server-side'}
+                shipping_fee: {description: 'Validated server-side'}
+                free_shipping_threshold: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'SHIPPING_RULE_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/shipping-rules/{shippingRule}:
     parameters:
       - in: path
@@ -1276,58 +1408,121 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['shipping-rules']
-      summary: 'PATCH /shipping-rules/{shippingRule}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: settings.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update shipping charges; market and city are immutable'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                shipping_fee: {description: 'Validated server-side'}
+                free_shipping_threshold: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'SHIPPING_RULE_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/finance/report/export.csv:
     get:
-      tags: ['finance']
-      summary: 'GET /finance/report/export.csv'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Download finance report CSV using same filters as finance report'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: period
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'CSV download; text/csv streamed attachment'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/finance/report:
     get:
-      tags: ['finance']
-      summary: 'GET /finance/report'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Finance report: delivered sales, expenses, COGS and provisional profit'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: period
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'FINANCE_REPORT'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/finance/expenses:
     get:
-      tags: ['finance']
-      summary: 'GET /finance/expenses'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Paginated expenses ordered by incurred date'
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
+        - in: query
+          name: category
+          schema: {type: string}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'FINANCE_EXPENSES'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
-      tags: ['finance']
-      summary: 'POST /finance/expenses'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create expense for active market and its currency'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                market_id: {description: 'Validated server-side'}
+                category: {description: 'Validated server-side'}
+                description: {description: 'Validated server-side'}
+                amount: {description: 'Validated server-side'}
+                incurred_on: {description: 'Validated server-side'}
+                reference: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'FINANCE_EXPENSE_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/finance/expenses/{expense}:
     parameters:
       - in: path
@@ -1335,25 +1530,36 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['finance']
-      summary: 'PATCH /finance/expenses/{expense}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update expense; market and currency cannot be reassigned'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                category: {description: 'Validated server-side'}
+                description: {description: 'Validated server-side'}
+                amount: {description: 'Validated server-side'}
+                incurred_on: {description: 'Validated server-side'}
+                reference: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'FINANCE_EXPENSE_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: ['finance']
-      summary: 'DELETE /finance/expenses/{expense}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Archive expense'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'FINANCE_EXPENSE_ARCHIVED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/finance/order-items/{item}/cost:
     parameters:
       - in: path
@@ -1361,15 +1567,25 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['finance']
-      summary: 'PATCH /finance/order-items/{item}/cost'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: finance.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Set historical order-item unit cost in an active currency'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                unit_cost_snapshot: {description: 'Validated server-side'}
+                unit_cost_currency_code: {description: 'Validated server-side'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'FINANCE_ITEM_COST_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/orders/{order}/refund-requests:
     parameters:
       - in: path
