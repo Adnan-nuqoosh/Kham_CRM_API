@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\ProductStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Market;
+use App\Models\InventoryStock;
+use App\Services\FulfillmentWarehouseResolver;
 use App\Models\Product;
 use App\Support\ApiResponse;
 use App\Support\PaginationMeta;
@@ -68,12 +70,15 @@ class PublicStorefrontCatalogController extends Controller
 
     private function display(Product $product, string $locale, Market $market): array
     {
+        $warehouse = app(FulfillmentWarehouseResolver::class)->forMarket((int) $market->id);
         $variants = $product->variants()->where(fn ($q) => $this->sellableVariant($q, $market))
             ->with(['prices' => fn ($q) => $q->where('market_id', $market->id)
                 ->where('currency_id', $market->currency_id)->where('is_active', true)
                 ->where(fn ($dates) => $dates->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
                 ->where(fn ($dates) => $dates->whereNull('ends_at')->orWhere('ends_at', '>=', now()))])
             ->orderBy('id')->get();
+        $stockByVariant = InventoryStock::query()->where('warehouse_id', $warehouse->id)
+            ->whereIn('variant_id', $variants->pluck('id'))->get()->keyBy('variant_id');
         return [
             'id' => $product->id,
             'slug' => $product->slug,
@@ -86,6 +91,7 @@ class PublicStorefrontCatalogController extends Controller
                 'id' => $v->id,
                 'title' => $v->title,
                 'price' => $v->prices->first()?->price,
+                'in_stock' => ($stockByVariant->get($v->id)?->available ?? 0) > 0,
             ])->all(),
         ];
     }
