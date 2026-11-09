@@ -30,6 +30,22 @@ final class StorefrontLocale
         return 'en';
     }
 
+    /**
+     * Add localized display fields while preserving original English and Arabic values.
+     */
+    public static function catalogFields(object $model, string $locale, array $fields): array
+    {
+        $localized = ['locale' => $locale];
+        foreach ($fields as $field) {
+            $localized[$field . '_localized'] = self::text(
+                $model->{$field},
+                $model->{$field . '_ar'},
+                $locale
+            );
+        }
+        return $localized;
+    }
+
     public static function text(?string $english, ?string $arabic, string $locale): ?string
     {
         if ($locale === 'ar' && $arabic !== null && trim($arabic) !== '') {
