@@ -79,6 +79,7 @@ class PublicStorefrontCatalogController extends Controller
             ->orderBy('id')->get();
         $stockByVariant = InventoryStock::query()->where('warehouse_id', $warehouse->id)
             ->whereIn('variant_id', $variants->pluck('id'))->get()->keyBy('variant_id');
+        $linkedIngredients = $product->linkedIngredients()->where('is_active', true)->get();
         return [
             'id' => $product->id,
             'slug' => $product->slug,
@@ -87,6 +88,12 @@ class PublicStorefrontCatalogController extends Controller
             'short_description' => StorefrontLocale::text($product->short_description, $product->short_description_ar, $locale),
             'description' => StorefrontLocale::text($product->description, $product->description_ar, $locale),
             'ingredients' => StorefrontLocale::text($product->ingredients, $product->ingredients_ar, $locale),
+            'linked_ingredients' => $linkedIngredients->map(fn ($ingredient) => [
+                'id' => $ingredient->id,
+                'slug' => $ingredient->slug,
+                'name' => StorefrontLocale::text($ingredient->name, $ingredient->name_ar, $locale),
+                'description' => StorefrontLocale::text($ingredient->description, $ingredient->description_ar, $locale),
+            ])->all(),
             'usage_instructions' => StorefrontLocale::text($product->usage_instructions, $product->usage_instructions_ar, $locale),
             'currency_code' => $market->currency->code,
             'variants' => $variants->map(fn ($v) => [
