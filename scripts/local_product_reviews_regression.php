@@ -32,6 +32,9 @@ try{
     $product->save();
     $base='storefront/products/'.$product->id.'/reviews';
     [$status,$body]=$call($base);
+    if ($status !== 200 || ($body['data']['review_count'] ?? -1) !== 0 || ($body['data']['average_rating'] ?? false) !== null) {
+        echo 'DEBUG empty summary HTTP='.$status.' response='.json_encode($body, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR)."\n";
+    }
     $check($status===200&&($body['data']['review_count']??-1)===0
         &&($body['data']['average_rating']??false)===null,'empty public review summary');
     $make=static fn(int $rating,string $state,string $name)=>\App\Models\ProductReview::create([
