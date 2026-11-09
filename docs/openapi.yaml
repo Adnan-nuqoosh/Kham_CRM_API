@@ -1116,23 +1116,29 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: [CRM]
+      tags: [Media]
       summary: 'Upload category image'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 5120 KiB'}
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200': {description: 'CATEGORY_IMAGE_UPLOADED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: [CRM]
-      summary: 'Remove category image'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      tags: [Media]
+      summary: 'Delete category image'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200': {description: 'CATEGORY_IMAGE_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
 
@@ -1143,23 +1149,29 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: [CRM]
+      tags: [Media]
       summary: 'Upload brand logo'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 5120 KiB'}
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200': {description: 'BRAND_LOGO_UPLOADED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: [CRM]
-      summary: 'Remove brand logo'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      tags: [Media]
+      summary: 'Delete brand logo'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200': {description: 'BRAND_LOGO_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
 
@@ -1170,15 +1182,29 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: [CRM]
-      summary: 'Upload product images'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      tags: [Media]
+      summary: 'Upload one to ten product images'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [images]
+              properties:
+                images:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 8192 KiB per file'}
+                alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+                is_primary: {type: boolean}
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '201': {description: 'PRODUCT_IMAGES_UPLOADED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
 
   /api/v1/products/{product}/images/{media}:
     parameters:
@@ -1186,21 +1212,19 @@ paths:
         name: product
         required: true
         schema: {type: string}
-    parameters:
       - in: path
         name: media
         required: true
         schema: {type: string}
     delete:
-      tags: [CRM]
-      summary: 'Remove product image'
-      description: 'Endpoint-specific input and output field schemas still require source-level verification; do not treat this operation as a finalized contract.'
-      x-documentation-status: partial-contract
+      tags: [Media]
+      summary: 'Delete image belonging to specified product'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Success response; exact response contract pending verification}
+        '200': {description: 'PRODUCT_IMAGE_DELETED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Image does not belong to product or resource missing}
 
   /api/v1/currencies:
     get:
