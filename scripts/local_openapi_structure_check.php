@@ -3,6 +3,8 @@
 declare(strict_types=1);
 $yaml=file_get_contents(dirname(__DIR__).'/docs/openapi.yaml');
 if($yaml===false){fwrite(STDERR,"FAIL: missing docs/openapi.yaml\n");exit(1);}
+// Windows Git may check out YAML with CRLF; normalize before line-anchored checks.
+$yaml=str_replace(["\r\n","\r"],"\n",$yaml);
 $errors=[];
 if(!preg_match('/^openapi: 3\.0\.\d+$/m',$yaml))$errors[]='Expected OpenAPI 3.0.x declaration';
 if(!preg_match('/^paths:$/m',$yaml)||!preg_match('/^components:$/m',$yaml))$errors[]='Missing paths or components';
