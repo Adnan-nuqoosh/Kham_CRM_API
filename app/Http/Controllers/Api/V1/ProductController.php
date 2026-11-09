@@ -11,6 +11,7 @@ use App\Models\ProductMarketPrice;
 use App\Models\ProductMedia;
 use App\Models\ProductVariant;
 use App\Support\ApiResponse;
+use App\Support\StorefrontLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class ProductController extends Controller
         $products = $query->latest()->paginate(\App\Support\PaginationMeta::perPage($request, 20));
 
         return ApiResponse::success(
-            $products->items(),
+            collect($products->items())->map(fn (Product $product) => $this->localizedProduct($product, $request))->all(),
             'Products fetched.',
             'PRODUCT_LIST',
             200,
@@ -76,9 +77,9 @@ class ProductController extends Controller
         }
     }
 
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
-        return ApiResponse::success($product->load($this->relations()));
+        return ApiResponse::success($this->localizedProduct($product->load($this->relations()), $request));
     }
 
     public function update(ProductStoreRequest $request, Product $product)
@@ -294,6 +295,15 @@ class ProductController extends Controller
         abort_if($hasPrices && !$request->user()?->can('pricing.manage'), 403, 'Missing pricing.manage permission.');
         abort_if($hasStocks && !$request->user()?->can('inventory.manage'), 403, 'Missing inventory.manage permission.');
         abort_if($hasCostChanges && !$request->user()?->can('finance.manage'), 403, 'Missing finance.manage permission.');
+    }
+
+    private function localizedProduct(Product $product, Request $request): array
+    {
+        return array_merge($product->toArray(), StorefrontLocale::catalogFields(
+            $product, StorefrontLocale::resolve($request),
+            ['name', 'short_description', 'description', 'ingredients',
+                'usage_instructions', 'seo_title', 'seo_description']
+        ));
     }
 
     private function relations(): array
