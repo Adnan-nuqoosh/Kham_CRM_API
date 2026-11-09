@@ -606,69 +606,6 @@ paths:
         '200': {description: Placeholder; actual success status and response schema require verification}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
-  /api/v1/homepage/sections:
-    post:
-      tags: ['homepage']
-      summary: 'POST /homepage/sections'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
-      security: [{sanctumBearer: []}]
-      responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-  /api/v1/homepage/sections/{section}:
-    parameters:
-      - in: path
-        name: section
-        required: true
-        schema: {type: string}
-    patch:
-      tags: ['homepage']
-      summary: 'PATCH /homepage/sections/{section}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
-      security: [{sanctumBearer: []}]
-      responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-    delete:
-      tags: ['homepage']
-      summary: 'DELETE /homepage/sections/{section}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
-      security: [{sanctumBearer: []}]
-      responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-  /api/v1/partner-applications/{application}:
-    parameters:
-      - in: path
-        name: application
-        required: true
-        schema: {type: string}
-    get:
-      tags: ['partner-applications']
-      summary: 'GET /partner-applications/{application}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.view.'
-      x-documentation-status: route-inventory-only
-      security: [{sanctumBearer: []}]
-      responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-    patch:
-      tags: ['partner-applications']
-      summary: 'PATCH /partner-applications/{application}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.manage.'
-      x-documentation-status: route-inventory-only
-      security: [{sanctumBearer: []}]
-      responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/newsletter/subscribers:
     get:
       tags: ['newsletter']
