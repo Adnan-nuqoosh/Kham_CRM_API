@@ -41,3 +41,10 @@ php scripts/local_myfatoorah_end_to_end_regression.php
 ```
 
 **Safety:** Never run `migrate:fresh` or destructive reset on `kham_crm_api`. Regression fixtures use transaction rollback. Never store real API tokens or webhook secrets in Git.
+
+### Local verification — 2026-11-09
+- User ran additive unique-index migration successfully on local XAMPP database only.
+- Hosted checkout regression **11/11 PASS**, including direct database duplicate rejection and same-reference/different-provider acceptance.
+- End-to-end webhook regression **22/22 PASS**; prior HTTP webhook regression **20/20 PASS** (53 total checks across suites; latest run covered hosted and end-to-end).
+- All regression fixtures rolled back; Egypt stock restored. VPS production deployment and backup verification remain pending.
+- **Open safety issue:** hosted initiation currently makes a network request while holding an order row lock. A timeout after provider acceptance may leave no local payment record, so a later retry with a new idempotency key could initiate a second charge. Do not enable hosted checkout in production until durable initiation reservation, same-key retry semantics and recovery have been implemented and tested.
