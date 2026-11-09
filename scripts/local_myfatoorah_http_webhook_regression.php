@@ -179,6 +179,40 @@ try {
         && DB::table('myfatoorah_webhook_receipts')->where('provider_invoice_id', $invoice)->count() === 0,
         'Pending webhook creates no receipt or paid transition');
 
+    // A signed callback must not override authoritative provider amount/currency.
+    $fakeProvider($providerFor($event, (string) ((int) $order->grand_total + 1),
+        $order->currency_code));
+    [$status] = $send($event, $sign($event));
+    $assert($status === 422, 'Provider amount mismatch rejected');
+    $assert($order->fresh()->payment_status === PaymentStatus::Pending,
+        'Amount mismatch cannot mark order paid');
+
+    $fakeProvider($providerFor($event, (string) $order->grand_total, 'USD'));
+    [$status] = $send($event, $sign($event));
+    $assert($status === 422, 'Provider currency mismatch rejected');
+
+    $wrongDetails = $providerFor($event, (string) $order->grand_total,
+        $order->currency_code);
+    $wrongDetails['Invoice']['ExternalIdentifier'] = 'KH-OTHER-ORDER';
+    $fakeProvider($wrongDetails);
+    [$status] = $send($event, $sign($event));
+    $assert($status === 422, 'Provider external order reference mismatch rejected');
+
+    // Transport failure must not cause settlement or receipt persistence.
+    Http::swap(new \\Illuminate\\Http\\Client\\Factory());
+    Http::fake(['apitest.myfatoorah.com/v3/payments/*' => Http::response(
+        ['IsSuccess' => false], 503
+    )]);
+    Http::preventStrayRequests();
+    [$status] = $send($event, $sign($event));
+    $assert($status === 500, 'Provider enquiry failure fails closed');
+    $assert($order->fresh()->payment_status === PaymentStatus::Pending
+        && $payment->fresh()->status === PaymentStatus::Pending->value
+        && DB::table('myfatoorah_webhook_receipts')
+            ->where('provider_invoice_id', $invoice)->count() === 0,
+        'Provider enquiry failure leaves payment and receipt untouched');
+
+    // Event.Reference is unsigned. Changing it must not bypass replay safety.
     $fakeProvider($providerFor($event, (string) $order->grand_total,
         $order->currency_code));
     [$status, $body] = $send($event, $sign($event));
@@ -197,6 +231,14 @@ try {
     $assert(DB::table('payments')->where('order_id', $order->id)->count() === 1
         && DB::table('myfatoorah_webhook_receipts')->where('provider_invoice_id', $invoice)->count() === 1,
         'Duplicate callback creates no additional payment or receipt');
+    $replayed = $event;
+    $replayed['Event']['Reference'] = 'evt_' . Str::random(20);
+    [$status, $body] = $send($replayed, $sign($replayed));
+    $assert($status === 200 && data_get($body, 'data.duplicate') === true,
+        'Changed unsigned event reference cannot bypass duplicate protection');
+    $assert(DB::table('myfatoorah_webhook_receipts')
+        ->where('provider_invoice_id', $invoice)->count() === 1,
+        'Unsigned reference replay creates no second receipt');
 
     // A fresh order lets us force a settlement rejection after receipt insert.
     $second = app(OrderService::class)->create([
