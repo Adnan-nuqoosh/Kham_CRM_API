@@ -32,11 +32,11 @@ try{
     $product->save();
     $base='storefront/products/'.$product->id.'/reviews';
     [$status,$body]=$call($base);
-    if ($status !== 200 || ($body['data']['review_count'] ?? -1) !== 0 || ($body['data']['average_rating'] ?? false) !== null) {
+    if ($status !== 200 || ($body['data']['review_count'] ?? -1) !== 0 || (!array_key_exists('average_rating', $body['data'] ?? []) || $body['data']['average_rating'] !== null)) {
         echo 'DEBUG empty summary HTTP='.$status.' response='.json_encode($body, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR)."\n";
     }
     $check($status===200&&($body['data']['review_count']??-1)===0
-        &&($body['data']['average_rating']??false)===null,'empty public review summary');
+        &&array_key_exists('average_rating', $body['data'] ?? []) && $body['data']['average_rating']===null,'empty public review summary');
     $make=static fn(int $rating,string $state,string $name)=>\App\Models\ProductReview::create([
         'product_id'=>$product->id,'rating'=>$rating,'reviewer_name'=>$name,
         'verified_purchase'=>false,'status'=>$state,'body'=>'Regression fixture',
