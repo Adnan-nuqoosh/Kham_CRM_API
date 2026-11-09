@@ -48,3 +48,11 @@ php scripts/local_myfatoorah_end_to_end_regression.php
 - End-to-end webhook regression **22/22 PASS**; prior HTTP webhook regression **20/20 PASS** (53 total checks across suites; latest run covered hosted and end-to-end).
 - All regression fixtures rolled back; Egypt stock restored. VPS production deployment and backup verification remain pending.
 - **Open safety issue:** hosted initiation currently makes a network request while holding an order row lock. A timeout after provider acceptance may leave no local payment record, so a later retry with a new idempotency key could initiate a second charge. Do not enable hosted checkout in production until durable initiation reservation, same-key retry semantics and recovery have been implemented and tested.
+
+
+### Durable reservation local verification — 2026-11-09
+- Additive migration `2026_11_09_130000_create_myfatoorah_checkout_reservations_table.php` applied successfully on **local XAMPP only**.
+- Hosted checkout controller now commits an order/idempotency-key reservation **before** calling the provider, without holding the order transaction lock across HTTP. A completed same-key request returns the saved invoice/URL; a different key is rejected; ambiguous provider failures leave an `uncertain` reservation and prevent automatic new initiation.
+- Developer's latest local run: **hosted 14/14 PASS**, **HTTP webhook 20/20 PASS**, **end-to-end 22/22 PASS** = **56/56 checks across three suites**. Database fixtures and Egypt stock restored.
+- **Remaining safety work:** test timeout and same-key replay of an *uncertain* reservation explicitly; test process crash between reservation and provider request, concurrent requests, and failure between provider success and database commit. Add controlled reconciliation/manual resolution and payment failed/cancelled lifecycle; no automatic second charge.
+- **Still pending:** guest hosted checkout integration, frontend API contract, live sandbox API schema verification/real sandbox transaction, and production hardening. No live VPS deployment or migration.
