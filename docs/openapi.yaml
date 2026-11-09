@@ -218,20 +218,28 @@ paths:
 
   /api/v1/storefront/ritual-quiz/questions:
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/ritual-quiz/questions'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront]
+      summary: 'Active localized quiz questions and options'
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'RITUAL_QUIZ'}
+
   /api/v1/storefront/ritual-quiz/recommendations:
     post:
-      tags: ['storefront']
-      summary: 'POST /storefront/ritual-quiz/recommendations'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront]
+      summary: 'Recommend market-eligible products from selected quiz options'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                market_id: {description: Validated by controller}
+                option_ids: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'RITUAL_RECOMMENDATIONS'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/ingredients:
     get:
       tags: [Storefront Ingredients]
@@ -698,15 +706,14 @@ paths:
 
   /api/v1/newsletter/subscribers:
     get:
-      tags: ['newsletter']
-      summary: 'GET /newsletter/subscribers'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM paginated subscriber search and status filter'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'NEWSLETTER_SUBSCRIBERS'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/newsletter/subscribers/{subscriber}:
     parameters:
       - in: path
@@ -714,15 +721,23 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['newsletter']
-      summary: 'PATCH /newsletter/subscribers/{subscriber}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: customers.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Change subscription status and rotate unsubscribe token'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'NEWSLETTER_SUBSCRIBER_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/rituals:
     get:
       tags: [Rituals]
@@ -780,25 +795,34 @@ paths:
 
   /api/v1/ritual-quiz/questions:
     get:
-      tags: ['ritual-quiz']
-      summary: 'GET /ritual-quiz/questions'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'CRM quiz questions with options and products'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Quiz list'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['ritual-quiz']
-      summary: 'POST /ritual-quiz/questions'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create quiz question'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question: {description: Validated by controller}
+                question_ar: {description: Validated by controller}
+                sort_order: {description: Validated by controller}
+                is_active: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'QUIZ_QUESTION_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/ritual-quiz/questions/{question}:
     parameters:
       - in: path
@@ -806,15 +830,26 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['ritual-quiz']
-      summary: 'PATCH /ritual-quiz/questions/{question}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update quiz question'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question: {description: Validated by controller}
+                question_ar: {description: Validated by controller}
+                sort_order: {description: Validated by controller}
+                is_active: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Quiz question updated'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/ritual-quiz/questions/{question}/options:
     parameters:
       - in: path
@@ -822,15 +857,26 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['ritual-quiz']
-      summary: 'POST /ritual-quiz/questions/{question}/options'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create quiz option'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: {description: Validated by controller}
+                label_ar: {description: Validated by controller}
+                sort_order: {description: Validated by controller}
+                is_active: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'QUIZ_OPTION_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/ritual-quiz/options/{option}:
     parameters:
       - in: path
@@ -838,15 +884,26 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['ritual-quiz']
-      summary: 'PATCH /ritual-quiz/options/{option}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Update quiz option'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: {description: Validated by controller}
+                label_ar: {description: Validated by controller}
+                sort_order: {description: Validated by controller}
+                is_active: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Quiz option updated'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/ritual-quiz/options/{option}/products:
     parameters:
       - in: path
@@ -854,15 +911,23 @@ paths:
         required: true
         schema: {type: string}
     put:
-      tags: ['ritual-quiz']
-      summary: 'PUT /ritual-quiz/options/{option}/products'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Replace option product weights'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                products: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Option products synchronized'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/ingredients:
     get:
       tags: [Ingredients]
@@ -1593,25 +1658,31 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['orders']
-      summary: 'GET /orders/{order}/refund-requests'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List refund requests for order'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'REFUND_REQUEST_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['orders']
-      summary: 'POST /orders/{order}/refund-requests'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Request refund; does not initiate provider refund'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'REFUND_REQUEST_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/refund-requests/{refund}/audit:
     parameters:
       - in: path
@@ -1619,15 +1690,14 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['refund-requests']
-      summary: 'GET /refund-requests/{refund}/audit'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: refunds.approve.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'List refund audit events'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'REFUND_AUDIT_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/refund-requests/{refund}/approve:
     parameters:
       - in: path
@@ -1635,36 +1705,42 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['refund-requests']
-      summary: 'POST /refund-requests/{refund}/approve'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: refunds.approve.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Approve refund; requester cannot approve own request; provider refund not initiated'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirm: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'REFUND_APPROVED_AWAITING_PROVIDER'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/orders:
     get:
-      tags: ['orders']
-      summary: 'GET /orders'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Paginated CRM orders with filters'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'ORDER_LIST'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['orders']
-      summary: 'POST /orders'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Create order and reserve inventory'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'ORDER_CREATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/orders/{order}:
     parameters:
       - in: path
@@ -1672,15 +1748,14 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['orders']
-      summary: 'GET /orders/{order}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.view.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Order detail with related customer items payments and shipments'
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'Order detail'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted/provider-enquiry:
     parameters:
       - in: path
@@ -1736,15 +1811,22 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['orders']
-      summary: 'PATCH /orders/{order}/status'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [CRM]
+      summary: 'Transition order status'
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: {description: Validated by controller}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'ORDER_STATUS_UPDATED'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
 
 components:
   securitySchemes:
