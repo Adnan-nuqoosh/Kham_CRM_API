@@ -10,6 +10,9 @@ use App\Enums\ProductStatus;
 use App\Models\InventoryStock;
 use App\Models\Market;
 use App\Models\OrderRefundRequest;
+use App\Models\RefundProviderEvidence;
+use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
 use App\Models\ProductMarketPrice;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -121,6 +124,36 @@ try {
     $requester->revokePermissionTo($approve);
     [$status] = $call('GET', "refund-requests/{$refund->id}/audit");
     $check($status === 403, 'non-finance requester cannot read refund audit');
+    $evidence = RefundProviderEvidence::recordUnverified(
+        $refund->fresh(), 'myfatoorah', 'REF-' . Str::random(20),
+        (string) $refund->amount, (string) $refund->currency_code
+    );
+    $check($evidence->verification_status === 'unverified',
+        'provider reference evidence remains unverified');
+    $check($order->fresh()->payment_status === PaymentStatus::Paid
+        && $payment->fresh()->status === 'paid',
+        'unverified provider reference does not settle payment');
+    foreach ([
+        [(string) $refund->amount, 'INVALID'],
+        ['999999.0000', (string) $refund->currency_code],
+    ] as [$amount, $currency]) {
+        try {
+            RefundProviderEvidence::recordUnverified($refund->fresh(), 'myfatoorah',
+                'INVALID-' . Str::random(12), $amount, $currency);
+            throw new RuntimeException('FAIL: mismatched provider evidence accepted');
+        } catch (ValidationException $exception) {
+            $check(true, 'mismatched provider evidence rejected');
+        }
+    }
+    try {
+        RefundProviderEvidence::recordUnverified($refund->fresh(), 'myfatoorah',
+            'SECOND-' . Str::random(12), (string) $refund->amount, (string) $refund->currency_code);
+        throw new RuntimeException('FAIL: second evidence for same request accepted');
+    } catch (QueryException $exception) {
+        $check(true, 'database rejects second evidence for same refund request');
+    }
+    $check(RefundProviderEvidence::where('refund_request_id', $refund->id)->count() === 1,
+        'duplicate attempt leaves exactly one provider evidence row');
     echo "ALL REFUND APPROVAL HTTP CHECKS PASSED (rolled back)\n";
 } finally {
     DB::rollBack();
