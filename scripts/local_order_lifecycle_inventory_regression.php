@@ -157,5 +157,23 @@ try {
     $check($http('PATCH',$path,['status'=>'cancelled'])===200
         && (int)$stock->fresh()->reserved===$reservedBefore-2,
         'replayed authorized cancellation cannot double-release inventory');
+    $paidHttpOrder = $orders->create($payload);
+    $paidHttpOrder->forceFill(['payment_status'=>\App\Enums\PaymentStatus::Paid])->save();
+    $paidBefore = (int)$stock->fresh()->reserved;
+    $check($http('PATCH','orders/'.$paidHttpOrder->id.'/status',['status'=>'cancelled'])===422
+        && $paidHttpOrder->fresh()->status===OrderStatus::Pending
+        && (int)$stock->fresh()->reserved===$paidBefore,
+        'authorized manager cannot cancel paid order through HTTP');
+    $ledgerHttpOrder = $orders->create($payload);
+    \App\Models\Payment::create([
+        'order_id'=>$ledgerHttpOrder->id,'provider'=>'local-regression',
+        'method'=>'test','status'=>'paid','amount'=>$ledgerHttpOrder->grand_total,
+        'currency_code'=>$ledgerHttpOrder->currency_code,
+    ]);
+    $ledgerBefore = (int)$stock->fresh()->reserved;
+    $check($http('PATCH','orders/'.$ledgerHttpOrder->id.'/status',['status'=>'cancelled'])===422
+        && $ledgerHttpOrder->fresh()->status===OrderStatus::Pending
+        && (int)$stock->fresh()->reserved===$ledgerBefore,
+        'authorized manager cannot cancel stale order with paid ledger through HTTP');
     echo "ALL ORDER LIFECYCLE CHECKS PASSED (rolled back)\n";
 } finally { DB::rollBack(); }
