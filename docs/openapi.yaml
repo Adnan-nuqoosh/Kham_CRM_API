@@ -344,20 +344,40 @@ paths:
 
   /api/v1/storefront/payments/myfatoorah/local-webhook:
     post:
-      tags: ['storefront']
-      summary: 'POST /storefront/payments/myfatoorah/local-webhook'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Local/sandbox-only workflow; not production-ready.'
-      x-documentation-status: route-inventory-only
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only signed MyFatoorah webhook; 64 KiB JSON limit; signed identifiers matched to stored payment and authoritative provider details'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'SANDBOX_PAYMENT_VERIFIED'}
+        '202': {description: 'PAYMENT_NOT_CONFIRMED'}
+        '404': {description: Endpoint disabled or order not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '400': {description: INVALID_WEBHOOK_BODY; invalid JSON or payload exceeds 64 KiB}
+
   /api/v1/storefront/checkout/test-order:
     post:
-      tags: ['storefront']
-      summary: 'POST /storefront/checkout/test-order'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Local/sandbox-only workflow; not production-ready.'
-      x-documentation-status: route-inventory-only
+      tags: [Sandbox Payments]
+      summary: 'Local-only mock checkout; no card collection or real payment; idempotency key and market, cart, customer, address required'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key: {type: string, minLength: 16, maxLength: 128}
+                market_id: {type: integer}
+                items: {type: array, minItems: 1, maxItems: 25, items: {type: object}}
+                payment_method: {type: string, enum: [mock_fatoora]}
+                customer: {type: object}
+                shipping_address: {type: object}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'MOCK_CHECKOUT_ORDER'}
+        '200': {description: 'Idempotent replay'}
+        '404': {description: Endpoint disabled or order not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/checkout/quote:
     post:
       tags: [Storefront]
@@ -1782,15 +1802,25 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['orders']
-      summary: 'POST /orders/{order}/payments/myfatoorah/sandbox-hosted/provider-enquiry'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Local/sandbox-only workflow; not production-ready. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only read-only provider enquiry; validates payment_id against stored invoice, order, currency and amount; never settles'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_id: {type: string, pattern: '^[0-9]{1,64}$'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'SANDBOX_PROVIDER_ENQUIRY_MATCHED'}
+        '404': {description: Endpoint disabled or order not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted/status:
     parameters:
       - in: path
@@ -1798,15 +1828,17 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['orders']
-      summary: 'GET /orders/{order}/payments/myfatoorah/sandbox-hosted/status'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Local/sandbox-only workflow; not production-ready. Permission: orders.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only read-only hosted reservation status; does not query provider or authorize retry'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: 'SANDBOX_HOSTED_RESERVATION_STATUS'}
+        '404': {description: Endpoint disabled or order not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted:
     parameters:
       - in: path
@@ -1814,15 +1846,27 @@ paths:
         required: true
         schema: {type: string}
     post:
-      tags: ['orders']
-      summary: 'POST /orders/{order}/payments/myfatoorah/sandbox-hosted'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Local/sandbox-only workflow; not production-ready. Permission: orders.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only sandbox hosted payment initiation; idempotent reservation; redirect does not prove payment'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key: {type: string, minLength: 16, maxLength: 128}
+                payment_method: {type: string, enum: [CARD, APPLE_PAY, GOOGLE_PAY, KNET]}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: 'SANDBOX_HOSTED_PAYMENT_CREATED'}
+        '202': {description: 'SANDBOX_HOSTED_PAYMENT_UNRESOLVED'}
+        '404': {description: Endpoint disabled or order not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/orders/{order}/status:
     parameters:
       - in: path
