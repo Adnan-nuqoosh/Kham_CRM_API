@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\{
 };
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
+use App\Http\Controllers\Api\V1\MarketTaxRuleController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahWebhookController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
@@ -119,6 +120,14 @@ Route::prefix('v1')->group(function () {
         // Authenticated CRM quote: tax is deliberately not configured yet.
         Route::post('/checkout/quote', CheckoutQuoteController::class)
             ->middleware('permission:orders.manage');
+
+        Route::get('/market-tax-rules', [MarketTaxRuleController::class, 'index'])
+            ->middleware('permission:settings.manage');
+        Route::put('/markets/{market}/tax-rule', [MarketTaxRuleController::class, 'upsert'])
+            ->middleware('permission:settings.manage');
+        // Approval requires a separate permission, never granted by the API.
+        Route::post('/markets/{market}/tax-rule/approve', [MarketTaxRuleController::class, 'approve'])
+            ->middleware('permission:tax.approve');
 
         Route::get('/shipping-rules', [ShippingRuleController::class, 'index'])
             ->middleware('permission:settings.manage');
