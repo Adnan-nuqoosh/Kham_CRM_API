@@ -31,3 +31,13 @@ Run `php scripts/local_openapi_contract_check.php` after `git pull`. This is a *
 
 ## Next documentation phases
 Document remaining CRM, catalog, inventory, checkout, shipping, finance, refunds, quiz, reviews, ingredients, rituals, brands, and authentication endpoints; add complete response examples and error schemas; validate all paths against the live route list. Do not publish internal-only payment test routes as production-ready.
+
+## Full route inventory (Phase 2)
+The OpenAPI file now inventories all current Laravel API route/method operations. Entries with `x-documentation-status: route-inventory-only` are **not fully specified contracts**: request bodies, exact response status codes, and endpoint-specific response schemas still need review. Never infer production readiness from inclusion, particularly local/sandbox payment routes.
+
+Run:
+```bat
+php -l scripts/local_openapi_full_coverage.php
+php scripts/local_openapi_full_coverage.php
+```
+The checker compares Laravel's registered `api/v1` methods (excluding automatic HEAD) against the OpenAPI paths. A single Laravel route may register multiple methods (e.g. PUT|PATCH), so the operation count can exceed the route count. This is a route inventory check, not a full OpenAPI schema validator. No migrations or database writes are performed.
