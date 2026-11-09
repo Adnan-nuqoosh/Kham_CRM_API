@@ -244,8 +244,8 @@ try {
         'currency_code' => $cancelledOrder->currency_code,
         'payload' => ['sandbox' => true],
     ]);
-    app(\App\Services\\OrderStatusService::class)->transition(
-        $cancelledOrder, \App\Enums\\OrderStatus::Cancelled
+    app(\App\Services\OrderStatusService::class)->transition(
+        $cancelledOrder, \App\Enums\OrderStatus::Cancelled
     );
     $cancelEvent = $event;
     $cancelEvent['Data']['Invoice']['Id'] = $cancelInvoice;
