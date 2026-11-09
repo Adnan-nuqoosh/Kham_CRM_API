@@ -347,38 +347,38 @@ paths:
                   code: {type: string, example: STOREFRONT_PRODUCTS}
                   data:
                     type: array
-                    items:
-                  type: object
-                  required: [id, slug, name, currency_code, variants]
-                  properties:
-                    id: {type: integer}
-                    slug: {type: string}
-                    badges: {type: array, items: {type: string}}
-                    locale: {type: string}
-                    name: {type: string}
-                    short_description: {type: string, nullable: true}
-                    description: {type: string, nullable: true}
-                    ingredients: {type: string, nullable: true}
-                    linked_ingredients:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          id: {type: integer}
-                          slug: {type: string}
-                          name: {type: string}
-                          description: {type: string, nullable: true}
-                    usage_instructions: {type: string, nullable: true}
-                    currency_code: {type: string}
-                    variants:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          id: {type: integer}
-                          title: {type: string}
-                          price: {type: string, nullable: true}
-                          in_stock: {type: boolean}
+                        items:
+                      type: object
+                      required: [id, slug, name, currency_code, variants]
+                      properties:
+                        id: {type: integer}
+                        slug: {type: string}
+                        badges: {type: array, items: {type: string}}
+                        locale: {type: string}
+                        name: {type: string}
+                        short_description: {type: string, nullable: true}
+                        description: {type: string, nullable: true}
+                        ingredients: {type: string, nullable: true}
+                        linked_ingredients:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: {type: integer}
+                              slug: {type: string}
+                              name: {type: string}
+                              description: {type: string, nullable: true}
+                        usage_instructions: {type: string, nullable: true}
+                        currency_code: {type: string}
+                        variants:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: {type: integer}
+                              title: {type: string}
+                              price: {type: string, nullable: true}
+                              in_stock: {type: boolean}
                   meta: {type: object}
         '422': {$ref: '#/components/responses/ValidationError'}
 
@@ -408,37 +408,37 @@ paths:
                   success: {type: boolean}
                   code: {type: string, example: STOREFRONT_PRODUCT}
                   data:
-                  type: object
-                  required: [id, slug, name, currency_code, variants]
-                  properties:
-                    id: {type: integer}
-                    slug: {type: string}
-                    badges: {type: array, items: {type: string}}
-                    locale: {type: string}
-                    name: {type: string}
-                    short_description: {type: string, nullable: true}
-                    description: {type: string, nullable: true}
-                    ingredients: {type: string, nullable: true}
-                    linked_ingredients:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          id: {type: integer}
-                          slug: {type: string}
-                          name: {type: string}
-                          description: {type: string, nullable: true}
-                    usage_instructions: {type: string, nullable: true}
-                    currency_code: {type: string}
-                    variants:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          id: {type: integer}
-                          title: {type: string}
-                          price: {type: string, nullable: true}
-                          in_stock: {type: boolean}
+                    type: object
+                    required: [id, slug, name, currency_code, variants]
+                    properties:
+                      id: {type: integer}
+                      slug: {type: string}
+                      badges: {type: array, items: {type: string}}
+                      locale: {type: string}
+                      name: {type: string}
+                      short_description: {type: string, nullable: true}
+                      description: {type: string, nullable: true}
+                      ingredients: {type: string, nullable: true}
+                      linked_ingredients:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: {type: integer}
+                            slug: {type: string}
+                            name: {type: string}
+                            description: {type: string, nullable: true}
+                      usage_instructions: {type: string, nullable: true}
+                      currency_code: {type: string}
+                      variants:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: {type: integer}
+                            title: {type: string}
+                            price: {type: string, nullable: true}
+                            in_stock: {type: boolean}
         '404': {description: 'Product not found or unavailable for market'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
@@ -527,7 +527,7 @@ paths:
                       shipping: {type: object}
                       total_before_tax: {type: string}
                       tax_status: {type: string}
-                      tax_total: {nullable: true}
+                      tax_total: {type: string, nullable: true}
                       is_final_payable_total: {type: boolean}
         '422': {$ref: '#/components/responses/ValidationError'}
 
@@ -1879,7 +1879,7 @@ paths:
                       shipping: {type: object}
                       total_before_tax: {type: string}
                       tax_status: {type: string}
-                      tax_total: {nullable: true}
+                      tax_total: {type: string, nullable: true}
                       is_final_payable_total: {type: boolean}
         '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
@@ -2384,7 +2384,7 @@ components:
         success: {type: boolean, example: true}
         code: {type: string}
         message: {type: string}
-        data: {nullable: true}
+        data: {type: string, nullable: true}
         meta: {type: object}
         errors: {type: object}
     PublicHomepageSection:
