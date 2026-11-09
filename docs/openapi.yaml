@@ -268,12 +268,19 @@ paths:
         '200': {description: Placeholder; actual success status and response schema require verification}
   /api/v1/storefront/brands:
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/brands'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Brands]
+      summary: Paginated active brands with localized display fields
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_BRANDS; localized brand list with pagination meta}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/brands/{slug}:
     parameters:
       - in: path
@@ -281,12 +288,18 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/brands/{slug}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Brands]
+      summary: Active brand detail and up to 100 active market-eligible products
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_BRAND; data contains brand and products arrays}
+        '404': {description: Active brand not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/products:
     get:
       tags: ['storefront']
@@ -334,50 +347,83 @@ paths:
         '200': {description: Placeholder; actual success status and response schema require verification}
   /api/v1/auth/forgot-password:
     post:
-      tags: ['auth']
-      summary: 'POST /auth/forgot-password'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Authentication]
+      summary: Request CRM password reset without account enumeration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: AUTH_RESET_REQUESTED; same public response for known and unknown emails}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded}
+        '503': {description: AUTH_RESET_UNAVAILABLE; secure frontend reset URL not configured}
+
   /api/v1/auth/reset-password:
     post:
-      tags: ['auth']
-      summary: 'POST /auth/reset-password'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Authentication]
+      summary: Reset CRM password and revoke existing API tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password, password_confirmation]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+                token: {type: string}
+                password: {type: string, minLength: 12}
+                password_confirmation: {type: string, minLength: 12}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: AUTH_RESET_COMPLETE}
+        '422': {description: Invalid or expired token, mismatched confirmation or invalid input}
+        '429': {description: Rate limit exceeded}
+
   /api/v1/auth/login:
     post:
-      tags: ['auth']
-      summary: 'POST /auth/login'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Authentication]
+      summary: Authenticate CRM user and issue Sanctum bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+                device_name: {type: string, nullable: true, maxLength: 100}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: AUTH_LOGIN; data contains token, token_type and user with roles.permissions}
+        '401': {description: AUTH_INVALID; invalid email or password}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: Rate limit exceeded}
+
   /api/v1/auth/me:
     get:
-      tags: ['auth']
-      summary: 'GET /auth/me'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Authentication]
+      summary: Current authenticated CRM user with roles and permissions
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: Current user in ApiResponse data}
         '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/auth/logout:
     post:
-      tags: ['auth']
-      summary: 'POST /auth/logout'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Authentication]
+      summary: Revoke the current Sanctum access token
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: AUTH_LOGOUT; data is null}
         '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/dashboard:
     get:
       tags: ['dashboard']
