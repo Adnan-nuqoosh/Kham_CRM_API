@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 $host = strtolower((string) config('database.connections.mysql.host', ''));
@@ -29,6 +30,10 @@ if (!app()->environment('local') || config('database.default') !== 'mysql'
     || !in_array($host, ['127.0.0.1', 'localhost'], true)
     || DB::connection()->getDatabaseName() !== 'kham_crm_api') {
     fwrite(STDERR, "STOP: Requires APP_ENV=local and local MySQL kham_crm_api.\n");
+    exit(2);
+}
+if (!Schema::hasTable('myfatoorah_checkout_reservations')) {
+    fwrite(STDERR, "STOP: Run the additive local reservation migration before this regression.\n");
     exit(2);
 }
 $market = Market::where('code', 'AE')->first();
@@ -45,7 +50,7 @@ $assert = static function (bool $condition, string $name): void {
     if (!$condition) throw new RuntimeException('FAIL: ' . $name);
     echo 'PASS: ' . $name . PHP_EOL;
 };
-$tables = ['orders', 'order_items', 'customers', 'payments', 'inventory_movements'];
+$tables = ['orders', 'order_items', 'customers', 'payments', 'inventory_movements', 'myfatoorah_checkout_reservations'];
 $counts = static function () use ($tables): array {
     $result = [];
     foreach ($tables as $table) $result[$table] = DB::table($table)->count();
@@ -109,6 +114,9 @@ try {
     [$status, $body] = $invoke($order);
     $assert($status === 201 && data_get($body, 'code') === 'SANDBOX_HOSTED_PAYMENT_CREATED',
         'Hosted payment initiated with mocked provider');
+    $reservation = DB::table('myfatoorah_checkout_reservations')->where('order_id', $order->id)->first();
+    $assert($reservation && $reservation->status === 'initiated' && $reservation->invoice_id === $invoice,
+        'Durable reservation resolved after provider initiation');
     $payment = $order->payments()->sole();
     $assert($payment->transaction_reference === $invoice
         && $payment->status === PaymentStatus::Pending->value
@@ -119,12 +127,24 @@ try {
         && $order->fresh()->payment_status === PaymentStatus::Pending,
         'Payment URL returned without marking order paid');
 
+    $sameKeyOrder = $newOrder();
+    $sameKey = 'sandbox_' . Str::random(24);
+    $sameInvoice = (string) random_int(100000000, 999999999);
+    $fake(['InvoiceId' => $sameInvoice, 'PaymentURL' => $url]);
+    [$firstStatus] = $invoke($sameKeyOrder, ['idempotency_key' => $sameKey]);
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::preventStrayRequests();
+    [$reusedStatus, $reusedBody] = $invoke($sameKeyOrder, ['idempotency_key' => $sameKey]);
+    $assert($firstStatus === 201 && $reusedStatus === 200
+        && data_get($reusedBody, 'code') === 'SANDBOX_HOSTED_PAYMENT_REUSED'
+        && data_get($reusedBody, 'data.invoice_id') === $sameInvoice,
+        'Same idempotency key returns stored invoice without provider call');
     try {
         $invoke($order);
-        throw new RuntimeException('FAIL: Duplicate payment attempt was allowed');
+        throw new RuntimeException('FAIL: Different-key duplicate was allowed');
     } catch (ValidationException $e) {
         $assert($order->payments()->count() === 1,
-            'Duplicate initiation blocked without a second payment');
+            'Different-key duplicate initiation blocked');
     }
 
     // A provider invoice must never be assigned to two different orders.
@@ -135,8 +155,9 @@ try {
         throw new RuntimeException('FAIL: Duplicate provider invoice was accepted');
     } catch (ValidationException $e) {
         $assert($collision->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')->where('order_id', $collision->id)->value('status') === 'uncertain'
             && $order->payments()->count() === 1,
-            'Duplicate provider invoice cannot attach to another order');
+            'Duplicate provider invoice leaves blocked uncertain reservation');
     }
 
     // Exercise the database index directly, bypassing the controller's guard.
@@ -181,8 +202,9 @@ try {
         throw new RuntimeException('FAIL: Provider failure was accepted');
     } catch (RuntimeException $e) {
         if (str_starts_with($e->getMessage(), 'FAIL:')) throw $e;
-        $assert($failed->payments()->count() === 0,
-            'Provider 503 creates no payment attempt');
+        $assert($failed->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')->where('order_id', $failed->id)->value('status') === 'uncertain',
+            'Provider 503 retains uncertain reservation without payment');
     }
 
     $invalid = $newOrder();
@@ -192,8 +214,9 @@ try {
         throw new RuntimeException('FAIL: Missing invoice was accepted');
     } catch (RuntimeException $e) {
         if (str_starts_with($e->getMessage(), 'FAIL:')) throw $e;
-        $assert($invalid->payments()->count() === 0,
-            'Missing provider invoice creates no payment attempt');
+        $assert($invalid->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')->where('order_id', $invalid->id)->value('status') === 'uncertain',
+            'Missing provider invoice retains uncertain reservation');
     }
 
     $cancelled = $newOrder();
