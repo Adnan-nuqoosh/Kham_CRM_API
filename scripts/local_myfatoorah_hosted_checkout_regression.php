@@ -257,6 +257,51 @@ try {
             'Missing provider invoice retains uncertain reservation');
     }
 
+    // Simulate an order cancellation occurring while provider HTTP is in flight.
+    // Provider may have accepted the charge: retain an uncertain reservation.
+    $midflightCancelled = $newOrder();
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::fake(['apitest.myfatoorah.com/v3/payments' => static function () use ($midflightCancelled, $url) {
+        $midflightCancelled->forceFill(['status' => OrderStatus::Cancelled])->save();
+        return Http::response(['IsSuccess' => true, 'Data' => [
+            'InvoiceId' => (string) random_int(100000000, 999999999),
+            'PaymentURL' => $url,
+        ]], 200);
+    }]);
+    Http::preventStrayRequests();
+    try {
+        $invoke($midflightCancelled);
+        throw new RuntimeException('FAIL: Midflight cancellation attached a payment');
+    } catch (ValidationException $e) {
+        $assert($midflightCancelled->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')
+                ->where('order_id', $midflightCancelled->id)->value('status') === 'uncertain',
+            'Midflight cancelled order retains uncertain reservation without payment');
+    }
+
+    // A changed total after the provider call must not be attached to the
+    // original invoice; an operator must reconcile the provider-side result.
+    $midflightTotal = $newOrder();
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::fake(['apitest.myfatoorah.com/v3/payments' => static function () use ($midflightTotal, $url) {
+        DB::table('orders')->where('id', $midflightTotal->id)
+            ->update(['grand_total' => '9999.0000', 'updated_at' => now()]);
+        return Http::response(['IsSuccess' => true, 'Data' => [
+            'InvoiceId' => (string) random_int(100000000, 999999999),
+            'PaymentURL' => $url,
+        ]], 200);
+    }]);
+    Http::preventStrayRequests();
+    try {
+        $invoke($midflightTotal);
+        throw new RuntimeException('FAIL: Midflight changed total attached a payment');
+    } catch (ValidationException $e) {
+        $assert($midflightTotal->payments()->count() === 0
+            && DB::table('myfatoorah_checkout_reservations')
+                ->where('order_id', $midflightTotal->id)->value('status') === 'uncertain',
+            'Midflight amount change retains uncertain reservation without payment');
+    }
+
     $cancelled = $newOrder();
     $cancelled->forceFill(['status' => OrderStatus::Cancelled])->save();
     try {
