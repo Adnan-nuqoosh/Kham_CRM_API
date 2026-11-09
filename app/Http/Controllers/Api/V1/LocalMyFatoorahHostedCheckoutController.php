@@ -194,9 +194,26 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
             ];
             }, 3);
         } catch (\Throwable $e) {
-            DB::table('myfatoorah_checkout_reservations')
-                ->where('id', $reservation['reservation_id'])
-                ->update(['status' => 'uncertain', 'updated_at' => now()]);
+            // The provider already returned an invoice. Preserve its reference
+            // for operator investigation even if local payment attachment fails.
+            // Do not expose the payment URL or automatically retry the POST.
+            // A collision with another reservation's invoice must not hide the
+            // original exception or attach the invoice to the wrong order.
+            try {
+                DB::table('myfatoorah_checkout_reservations')
+                    ->where('id', $reservation['reservation_id'])
+                    ->where('status', 'requesting')
+                    ->update([
+                        'status' => 'uncertain',
+                        'invoice_id' => $response['invoice_id'],
+                        'updated_at' => now(),
+                    ]);
+            } catch (\Illuminate\Database\QueryException $collision) {
+                DB::table('myfatoorah_checkout_reservations')
+                    ->where('id', $reservation['reservation_id'])
+                    ->where('status', 'requesting')
+                    ->update(['status' => 'uncertain', 'updated_at' => now()]);
+            }
             throw $e;
         }
 
