@@ -10,6 +10,7 @@ use App\Models\ProductVariant;
 use App\Services\FulfillmentWarehouseResolver;
 use App\Services\PricingService;
 use App\Services\ShippingQuoteService;
+use App\Services\MarketTaxQuoteService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,6 +93,7 @@ class PublicCheckoutQuoteController extends Controller
             round($subtotal, 4)
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
+        $taxReadiness = app(MarketTaxQuoteService::class)->readiness($market);
 
         // The public response does not expose internal shipping-rule identifiers.
         unset($shippingQuote['rule_id']);
@@ -104,8 +106,8 @@ class PublicCheckoutQuoteController extends Controller
             'net_subtotal' => number_format($subtotal, 4, '.', ''),
             'shipping' => $shippingQuote,
             'total_before_tax' => number_format($subtotal + $shippingTotal, 4, '.', ''),
-            'tax_status' => 'not_configured',
-            'is_final_payable_total' => false,
+            'tax_status' => $taxReadiness['tax_status'],
+            'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
         ], 'Provisional quote only; tax and final payable amount are not configured.', 'STOREFRONT_QUOTE')
             ->header('Cache-Control', 'no-store');
     }
