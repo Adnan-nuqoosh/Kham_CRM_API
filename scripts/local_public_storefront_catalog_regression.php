@@ -83,6 +83,25 @@ try{
     [$status,$fallback]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=ar');
     $check($status===200&&($fallback['data']['name']??null)==='English Fixture',
         'missing Arabic name safely falls back to English');
+    $product->forceFill([
+        'ingredients'=>'Rose oil and aloe',
+        'ingredients_ar'=>'زيت الورد والصبار',
+        'usage_instructions'=>'Apply gently',
+        'usage_instructions_ar'=>'يوضع بلطف',
+    ])->save();
+    [$status,$arIngredients]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=ar');
+    $check($status===200&&($arIngredients['data']['ingredients']??null)==='زيت الورد والصبار'
+        &&($arIngredients['data']['usage_instructions']??null)==='يوضع بلطف',
+        'Arabic public detail localizes ingredients and usage');
+    [$status,$enIngredients]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=en');
+    $check($status===200&&($enIngredients['data']['ingredients']??null)==='Rose oil and aloe'
+        &&($enIngredients['data']['usage_instructions']??null)==='Apply gently',
+        'English public detail retains original ingredients and usage');
+    $product->forceFill(['ingredients_ar'=>null,'usage_instructions_ar'=>''])->save();
+    [$status,$fallbackIngredients]=$call('storefront/products/'.$product->id.'?market_id='.$market->id.'&locale=ar');
+    $check($status===200&&($fallbackIngredients['data']['ingredients']??null)==='Rose oil and aloe'
+        &&($fallbackIngredients['data']['usage_instructions']??null)==='Apply gently',
+        'missing Arabic ingredient and usage translations fall back safely');
     $variant->forceFill(['is_active'=>false])->save();
     [$status]=$call('storefront/products/'.$product->id.'?market_id='.$market->id);
     $check($status===404,'inactive variant cannot make product publicly sellable');
