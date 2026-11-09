@@ -228,6 +228,43 @@ try {
         && (int) $stockAfterPayment->on_hand === (int) $stockBeforePayment->on_hand,
         'Payment callbacks do not change Egypt stock');
 
+
+    // A valid provider-paid callback must not settle an order already cancelled.
+    $cancelledOrder = app(OrderService::class)->create([
+        'market_id' => $market->id, 'customer_id' => $customer->id,
+        'items' => [['variant_id' => $variant->id, 'quantity' => 1]],
+        'shipping_mode' => 'manual', 'shipping_total' => 0, 'tax_total' => 0,
+    ]);
+    $cancelInvoice = (string) random_int(100000000, 999999999);
+    $cancelPaymentId = (string) random_int(100000000, 999999999);
+    $cancelAttempt = $cancelledOrder->payments()->create([
+        'provider' => 'myfatoorah', 'method' => 'hosted',
+        'transaction_reference' => $cancelInvoice, 'status' => 'pending',
+        'amount' => $cancelledOrder->grand_total,
+        'currency_code' => $cancelledOrder->currency_code,
+        'payload' => ['sandbox' => true],
+    ]);
+    app(\App\Services\\OrderStatusService::class)->transition(
+        $cancelledOrder, \App\Enums\\OrderStatus::Cancelled
+    );
+    $cancelEvent = $event;
+    $cancelEvent['Data']['Invoice']['Id'] = $cancelInvoice;
+    $cancelEvent['Data']['Invoice']['ExternalIdentifier'] = $cancelledOrder->order_number;
+    $cancelEvent['Data']['Transaction']['PaymentId'] = $cancelPaymentId;
+    $cancelProvider = $provider;
+    $cancelProvider['Invoice']['Id'] = $cancelInvoice;
+    $cancelProvider['Invoice']['ExternalIdentifier'] = $cancelledOrder->order_number;
+    $cancelProvider['Transaction']['PaymentId'] = $cancelPaymentId;
+    $cancelProvider['Amount']['ValueInDisplayCurrency'] = (string) $cancelledOrder->grand_total;
+    $fakeProvider($cancelProvider);
+    $receiptCount = DB::table('myfatoorah_webhook_receipts')->count();
+    [$status] = $send($cancelEvent, $sign($cancelEvent));
+    $assert($status === 422
+        && $cancelledOrder->fresh()->payment_status === PaymentStatus::Pending
+        && $cancelAttempt->fresh()->status === 'pending',
+        'Verified paid callback cannot settle cancelled order');
+    $assert(DB::table('myfatoorah_webhook_receipts')->count() === $receiptCount,
+        'Rejected cancelled-order callback rolls back receipt');
     echo "ALL LOCAL MYFATOORAH WEBHOOK HTTP TESTS PASSED; rolling back fixtures.\n";
 } catch (Throwable $e) {
     $exit = 1;
