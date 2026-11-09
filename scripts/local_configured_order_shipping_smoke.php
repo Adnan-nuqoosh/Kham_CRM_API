@@ -88,6 +88,17 @@ try {
         ],
     ];
 
+    // Rollback-only approved zero-rate tax fixture for configured-order integration.
+    // This is NOT approval of any real market tax policy.
+    $approverId = DB::table('users')->orderBy('id')->value('id');
+    if (!$approverId) throw new RuntimeException('STOP: local user required for test tax fixture.');
+    DB::table('market_tax_rules')->updateOrInsert(
+        ['market_id' => $market->id],
+        ['rate_percent' => 0, 'calculation_method' => 'exclusive',
+            'tax_shipping' => false, 'is_approved' => true,
+            'approved_at' => now(), 'approved_by' => $approverId,
+            'updated_at' => now()]
+    );
     config()->set('commerce.configured_shipping_orders_enabled', false);
     [$status] = $send($payload);
     checkConfigured($status === 422, 'Configured orders are disabled by default');
