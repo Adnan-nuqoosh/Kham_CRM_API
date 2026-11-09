@@ -1,6 +1,8 @@
 <?php
 
 return [
+    // HTTPS CRM frontend reset page; unset means email recovery is disabled.
+    'password_reset_frontend_url' => env('CRM_PASSWORD_RESET_FRONTEND_URL'),
     'badges' => [
         'new_days' => (int) env('STOREFRONT_BADGE_NEW_DAYS', 30),
         'bestseller_lookback_days' => (int) env('STOREFRONT_BADGE_BESTSELLER_LOOKBACK_DAYS', 90),
