@@ -13,6 +13,7 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Models\Customer;
 use App\Models\Market;
 use App\Models\Order;
@@ -127,6 +128,20 @@ try {
         && $order->fresh()->payment_status === PaymentStatus::Pending,
         'Payment URL returned without marking order paid');
 
+    // Inspect the stored reservation through the read-only controller.
+    // It must never contact the provider or mutate payment state.
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::preventStrayRequests();
+    $inspection = $app->make(LocalMyFatoorahReservationStatusController::class)($order);
+    $inspectionData = $inspection->getData(true);
+    $assert($inspection->getStatusCode() === 200
+        && data_get($inspectionData, 'code') === 'SANDBOX_HOSTED_RESERVATION_STATUS'
+        && data_get($inspectionData, 'data.initiation_status') === 'initiated'
+        && data_get($inspectionData, 'data.invoice_id') === $invoice
+        && data_get($inspectionData, 'data.safe_to_retry') === false
+        && $order->payments()->count() === 1,
+        'Read-only reservation inspection exposes stored attempt without provider call');
+
     $sameKeyOrder = $newOrder();
     $sameKey = 'sandbox_' . Str::random(24);
     $sameInvoice = (string) random_int(100000000, 999999999);
@@ -207,6 +222,15 @@ try {
             && DB::table('myfatoorah_checkout_reservations')->where('order_id', $failed->id)->value('status') === 'uncertain',
             'Provider 503 retains uncertain reservation without payment');
     }
+
+    $uncertainInspection = $app->make(LocalMyFatoorahReservationStatusController::class)($failed);
+    $uncertainData = $uncertainInspection->getData(true);
+    $assert($uncertainInspection->getStatusCode() === 200
+        && data_get($uncertainData, 'data.initiation_status') === 'uncertain'
+        && data_get($uncertainData, 'data.requires_manual_reconciliation') === true
+        && data_get($uncertainData, 'data.safe_to_retry') === false
+        && $failed->payments()->count() === 0,
+        'Read-only uncertain inspection requires reconciliation and forbids retry');
 
     // An ambiguous provider failure must never trigger a second POST.
     Http::swap(new \Illuminate\Http\Client\Factory());
@@ -325,6 +349,13 @@ try {
                 ->where('order_id', $midflightPaid->id)->value('status') === 'uncertain',
             'Midflight paid order blocks a second pending attempt');
     }
+
+    $missingInspection = $app->make(LocalMyFatoorahReservationStatusController::class)($newOrder());
+    $missingData = $missingInspection->getData(true);
+    $assert($missingInspection->getStatusCode() === 200
+        && data_get($missingData, 'data.reservation_exists') === false
+        && data_get($missingData, 'data.safe_to_retry') === false,
+        'Missing reservation inspection never claims provider retry is safe');
 
     $cancelled = $newOrder();
     $cancelled->forceFill(['status' => OrderStatus::Cancelled])->save();
