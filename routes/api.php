@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\{
 };
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
+use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
 use App\Http\Controllers\Api\V1\MarketTaxRuleController;
 use App\Http\Controllers\Api\V1\OrderRefundRequestController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
@@ -27,6 +28,11 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
+        ->middleware('throttle:storefront-quote');
+    Route::get('/storefront/products/{product}', [PublicStorefrontCatalogController::class, 'show'])
+        ->middleware('throttle:storefront-quote');
+
     // Disabled by default; controller also rejects non-local environments.
     Route::post('/storefront/payments/myfatoorah/local-webhook', LocalMyFatoorahWebhookController::class)
         ->middleware('throttle:storefront-test-order');
