@@ -196,9 +196,10 @@ try {
         'Database unique index permits same reference for different provider');
 
     $failed = $newOrder();
+    $failedKey = 'sandbox_' . Str::random(24);
     $fake([], 503, false);
     try {
-        $invoke($failed);
+        $invoke($failed, ['idempotency_key' => $failedKey]);
         throw new RuntimeException('FAIL: Provider failure was accepted');
     } catch (RuntimeException $e) {
         if (str_starts_with($e->getMessage(), 'FAIL:')) throw $e;
@@ -206,6 +207,43 @@ try {
             && DB::table('myfatoorah_checkout_reservations')->where('order_id', $failed->id)->value('status') === 'uncertain',
             'Provider 503 retains uncertain reservation without payment');
     }
+
+    // An ambiguous provider failure must never trigger a second POST.
+    Http::swap(new \Illuminate\Http\Client\Factory());
+    Http::preventStrayRequests();
+    [$retryStatus, $retryBody] = $invoke($failed, ['idempotency_key' => $failedKey]);
+    $assert($retryStatus === 202
+        && data_get($retryBody, 'code') === 'SANDBOX_HOSTED_PAYMENT_UNRESOLVED'
+        && data_get($retryBody, 'data.initiation_status') === 'uncertain'
+        && $failed->payments()->count() === 0,
+        'Uncertain same-key retry returns 202 without another provider call');
+    try {
+        $invoke($failed, ['idempotency_key' => 'sandbox_' . Str::random(24)]);
+        throw new RuntimeException('FAIL: Different key bypassed uncertain reservation');
+    } catch (ValidationException $e) {
+        $assert(DB::table('myfatoorah_checkout_reservations')
+            ->where('order_id', $failed->id)->count() === 1,
+            'Uncertain reservation blocks a different idempotency key');
+    }
+
+    // Simulate a process crash after reservation was committed, before
+    // a provider result was persisted. No provider POST is permitted on replay.
+    $crashed = $newOrder();
+    $crashedKey = 'sandbox_' . Str::random(24);
+    DB::table('myfatoorah_checkout_reservations')->insert([
+        'order_id' => $crashed->id,
+        'idempotency_key_hash' => hash('sha256', $crashedKey),
+        'status' => 'requesting',
+        'amount' => $crashed->grand_total,
+        'currency_code' => $crashed->currency_code,
+        'provider_requested_at' => now(),
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    [$crashStatus, $crashBody] = $invoke($crashed, ['idempotency_key' => $crashedKey]);
+    $assert($crashStatus === 202
+        && data_get($crashBody, 'data.initiation_status') === 'requesting'
+        && $crashed->payments()->count() === 0,
+        'Interrupted provider request fails closed without another provider call');
 
     $invalid = $newOrder();
     $fake(['InvoiceId' => '', 'PaymentURL' => $url]);
