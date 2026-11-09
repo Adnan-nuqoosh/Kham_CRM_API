@@ -202,12 +202,20 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/products/{product}/reviews'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Product Reviews]
+      summary: Approved reviews and rating summary for active product
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+        - in: query
+          name: per_page
+          schema: {type: integer, minimum: 1, maximum: 50, default: 10}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: PRODUCT_REVIEWS; data has reviews, review_count and average_rating}
+        '404': {description: Product inactive or not found}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/ritual-quiz/questions:
     get:
       tags: ['storefront']
@@ -226,12 +234,16 @@ paths:
         '200': {description: Placeholder; actual success status and response schema require verification}
   /api/v1/storefront/ingredients:
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/ingredients'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Ingredients]
+      summary: List active ingredients with localized names and descriptions
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_INGREDIENTS; paginated active ingredient list}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/storefront/ingredients/{slug}:
     parameters:
       - in: path
@@ -239,20 +251,19 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/ingredients/{slug}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Ingredients]
+      summary: Get an active ingredient by slug
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_INGREDIENT; localized id, slug, name, description}
+        '404': {description: Ingredient not found or inactive}
+
   /api/v1/storefront/rituals:
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/rituals'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Rituals]
+      summary: Paginated published rituals with localized content
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_RITUALS; published rituals ordered by sort_order and id}
+
   /api/v1/storefront/rituals/{slug}:
     parameters:
       - in: path
@@ -260,12 +271,12 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['storefront']
-      summary: 'GET /storefront/rituals/{slug}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review.'
-      x-documentation-status: route-inventory-only
+      tags: [Storefront Rituals]
+      summary: Published ritual detail including localized steps and active products
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: STOREFRONT_RITUAL; ritual fields plus steps and products}
+        '404': {description: Ritual not found or unpublished}
+
   /api/v1/storefront/brands:
     get:
       tags: [Storefront Brands]
@@ -628,25 +639,40 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/product-reviews:
     get:
-      tags: ['product-reviews']
-      summary: 'GET /product-reviews'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Product Reviews]
+      summary: CRM reviews list, optionally filtered by status or product
       security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [pending, approved, rejected]}
+        - in: query
+          name: product_id
+          schema: {type: integer}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: Paginated review models}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
-      tags: ['product-reviews']
-      summary: 'POST /product-reviews'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Product Reviews]
+      summary: Create pending review from delivered order item
+      description: Reviewer identity and verified purchase are derived server-side; client cannot set them.
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_item_id, rating]
+              properties:
+                order_item_id: {type: integer}
+                rating: {type: integer, minimum: 1, maximum: 5}
+                title: {type: string, nullable: true, maxLength: 150}
+                body: {type: string, nullable: true, maxLength: 3000}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '201': {description: REVIEW_PENDING}
+        '422': {description: Validation failed, duplicate review or order not delivered}
+
   /api/v1/product-reviews/{review}/moderate:
     parameters:
       - in: path
@@ -654,15 +680,22 @@ paths:
         required: true
         schema: {type: string}
     patch:
-      tags: ['product-reviews']
-      summary: 'PATCH /product-reviews/{review}/moderate'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Product Reviews]
+      summary: Approve or reject review
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [approved, rejected]}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: REVIEW_MODERATED}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/newsletter/subscribers:
     get:
       tags: ['newsletter']
@@ -692,25 +725,26 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/rituals:
     get:
-      tags: ['rituals']
-      summary: 'GET /rituals'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Rituals]
+      summary: CRM paginated ritual list
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: RITUAL_ADMIN_LIST}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['rituals']
-      summary: 'POST /rituals'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Rituals]
+      summary: Create ritual and optional steps/product links transactionally
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RitualInput'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '201': {description: RITUAL_CREATED}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /api/v1/rituals/{ritual}:
     parameters:
       - in: path
@@ -718,35 +752,32 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['rituals']
-      summary: 'GET /rituals/{ritual}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Rituals]
+      summary: CRM ritual with steps and products
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: RITUAL_ADMIN_DETAIL}
+        '404': {description: Ritual not found}
     patch:
-      tags: ['rituals']
-      summary: 'PATCH /rituals/{ritual}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Rituals]
+      summary: Update ritual and replace supplied steps or product links
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RitualInput'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: RITUAL_UPDATED}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
-      tags: ['rituals']
-      summary: 'DELETE /rituals/{ritual}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Rituals]
+      summary: Delete ritual
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: RITUAL_DELETED}
+        '404': {description: Ritual not found}
+
   /api/v1/ritual-quiz/questions:
     get:
       tags: ['ritual-quiz']
@@ -834,25 +865,28 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /api/v1/ingredients:
     get:
-      tags: ['ingredients']
-      summary: 'GET /ingredients'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Ingredients]
+      summary: CRM ingredient list
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '200': {description: INGREDIENT_LIST; paginated ingredient records}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      tags: ['ingredients']
-      summary: 'POST /ingredients'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Ingredients]
+      summary: Create ingredient
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IngredientInput'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
+        '201': {description: INGREDIENT_CREATED}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthenticated'}
         '403': {$ref: '#/components/responses/Forbidden'}
+
   /api/v1/ingredients/{ingredient}:
     parameters:
       - in: path
@@ -860,25 +894,26 @@ paths:
         required: true
         schema: {type: string}
     get:
-      tags: ['ingredients']
-      summary: 'GET /ingredients/{ingredient}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.view.'
-      x-documentation-status: route-inventory-only
+      tags: [Ingredients]
+      summary: CRM ingredient detail
       security: [{sanctumBearer: []}]
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: Ingredient model in response data}
+        '404': {description: Ingredient not found}
     patch:
-      tags: ['ingredients']
-      summary: 'PATCH /ingredients/{ingredient}'
-      description: 'Route inventory entry. Request and response schemas require endpoint-specific review. Permission: products.manage.'
-      x-documentation-status: route-inventory-only
+      tags: [Ingredients]
+      summary: Update ingredient fields
       security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IngredientInput'}
       responses:
-        '200': {description: Placeholder; actual success status and response schema require verification}
-        '401': {$ref: '#/components/responses/Unauthenticated'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+        '200': {description: INGREDIENT_UPDATED}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '404': {description: Ingredient not found}
+
   /api/v1/categories/{category}/image:
     parameters:
       - in: path
@@ -1537,6 +1572,49 @@ components:
         content: {type: object, nullable: true}
         sort_order: {type: integer, minimum: 0, maximum: 1000000}
         is_published: {type: boolean}
+    IngredientInput:
+      type: object
+      description: POST requires slug and name; PATCH accepts partial fields.
+      properties:
+        slug: {type: string, maxLength: 255}
+        name: {type: string, maxLength: 255}
+        name_ar: {type: string, nullable: true, maxLength: 255}
+        description: {type: string, nullable: true}
+        description_ar: {type: string, nullable: true}
+        is_active: {type: boolean}
+    RitualInput:
+      type: object
+      description: POST requires slug and title. Supplying steps or products replaces their existing relations on PATCH.
+      properties:
+        slug: {type: string, maxLength: 255}
+        title: {type: string, maxLength: 255}
+        title_ar: {type: string, nullable: true, maxLength: 255}
+        description: {type: string, nullable: true}
+        description_ar: {type: string, nullable: true}
+        image_url: {type: string, nullable: true, maxLength: 2048}
+        is_published: {type: boolean}
+        sort_order: {type: integer, minimum: 0}
+        steps:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required: [title, instructions]
+            properties:
+              title: {type: string, maxLength: 255}
+              title_ar: {type: string, nullable: true, maxLength: 255}
+              instructions: {type: string}
+              instructions_ar: {type: string, nullable: true}
+              sort_order: {type: integer, minimum: 0}
+        products:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [product_id]
+            properties:
+              product_id: {type: integer}
+              sort_order: {type: integer, minimum: 0}
     PartnerApplicationInput:
       type: object
       required: [contact_name, email, company_name, partner_type]
