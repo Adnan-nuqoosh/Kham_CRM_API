@@ -80,5 +80,19 @@ try {
     $statuses->transition($shipOrder,OrderStatus::Returned);
     $check((int)$stock->fresh()->on_hand===8,
         'returned status does not automatically restock uninspected goods');
+    foreach ([\\App\\Enums\\PaymentStatus::Authorized, \\App\\Enums\\PaymentStatus::Paid,
+        \\App\\Enums\\PaymentStatus::PartiallyRefunded, \\App\\Enums\\PaymentStatus::Refunded] as $paymentState) {
+        $paidOrder = $orders->create($payload);
+        $paidOrder->forceFill(['payment_status'=>$paymentState])->save();
+        $beforeReserved = (int)$stock->fresh()->reserved;
+        try {
+            $statuses->transition($paidOrder,OrderStatus::Cancelled);
+            throw new RuntimeException('FAIL: protected payment state cancelled: '.$paymentState->value);
+        } catch (ValidationException $e) {
+            $check($paidOrder->fresh()->status === OrderStatus::Pending
+                && (int)$stock->fresh()->reserved === $beforeReserved,
+                'cancellation blocked for '.$paymentState->value.' without releasing inventory');
+        }
+    }
     echo "ALL ORDER LIFECYCLE CHECKS PASSED (rolled back)\n";
 } finally { DB::rollBack(); }
