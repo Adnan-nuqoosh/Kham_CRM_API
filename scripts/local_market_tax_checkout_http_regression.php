@@ -9,6 +9,7 @@ use App\Models\InventoryStock;
 use App\Models\Market;
 use App\Models\MarketTaxRule;
 use App\Models\ProductVariant;
+use App\Models\ProductMarketPrice;
 use App\Models\ShippingRule;
 use App\Models\User;
 use App\Services\FulfillmentWarehouseResolver;
@@ -35,23 +36,32 @@ $call = static function (string $uri, array $payload) use ($kernel): array {
 };
 $market = Market::with('currency')->where('code','AE')->firstOrFail();
 $warehouse = app(FulfillmentWarehouseResolver::class)->forMarket((int)$market->id);
-$variant = ProductVariant::with('product')->where('is_active',true)->get()
-    ->first(function ($v) use ($market, $warehouse) {
-        if (!$v->product || $v->product->status !== ProductStatus::Active) return false;
-        $stock = InventoryStock::where('warehouse_id',$warehouse->id)->where('variant_id',$v->id)->first();
-        if (!$stock || $stock->available < 1) return false;
-        try {
-            $price = app(PricingService::class)->priceFor($v, (int)$market->id);
-            return (int)$price->currency_id === (int)$market->currency_id;
-        } catch (Throwable $e) { return false; }
-    });
-if (!$variant) { fwrite(STDERR, "STOP: AE active priced in-stock variant fixture required.\n"); exit(2); }
+// Create a dedicated local fixture inside a transaction, rather than requiring
+// existing AE pricing and stock. Existing catalog and inventory stay unchanged.
+DB::beginTransaction();
+try {
+    $variant = ProductVariant::with('product')->where('is_active', true)->get()
+        ->first(fn ($v) => $v->product && $v->product->status === ProductStatus::Active);
+    if (!$variant) {
+        throw new RuntimeException('STOP: An existing active catalog variant is required; no fixture created.');
+    }
+    $variant = $variant->replicate();
+    $variant->sku = 'TAX-HTTP-' . \\Illuminate\\Support\\Str::upper(\\Illuminate\\Support\\Str::random(12));
+    $variant->is_active = true;
+    $variant->save();
+    ProductMarketPrice::create([
+        'variant_id' => $variant->id, 'market_id' => $market->id,
+        'currency_id' => $market->currency_id, 'price' => '100.0000',
+        'is_active' => true,
+    ]);
+    InventoryStock::create([
+        'warehouse_id' => $warehouse->id, 'variant_id' => $variant->id,
+        'on_hand' => 20, 'reserved' => 0, 'damaged' => 0,
+    ]);
 $payload = [
     'market_id'=>$market->id, 'items'=>[['variant_id'=>$variant->id,'quantity'=>1]],
     'shipping_address'=>['country_code'=>'AE','city'=>'Dubai'],
 ];
-DB::beginTransaction();
-try {
     ShippingRule::where('market_id',$market->id)->update(['is_active'=>false]);
     ShippingRule::updateOrCreate(['market_id'=>$market->id,'city_key'=>'dubai'],
         ['shipping_fee'=>20,'free_shipping_threshold'=>null,'is_active'=>true]);
