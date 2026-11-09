@@ -20,8 +20,8 @@ class CheckoutQuoteController extends Controller
         $data = $request->validate([
             'market_id' => ['required', 'integer', 'exists:markets,id'],
             'coupon_code' => ['nullable', 'string', 'max:80'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.variant_id' => ['required', 'integer', 'exists:product_variants,id'],
+            'items' => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.variant_id' => ['required', 'integer', 'distinct:strict', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
             'shipping_address' => ['required', 'array'],
             'shipping_address.country_code' => ['required', 'string', 'size:2'],
@@ -29,6 +29,9 @@ class CheckoutQuoteController extends Controller
         ]);
 
         $market = Market::with('currency')->findOrFail($data['market_id']);
+        if (!$market->is_active || !$market->currency || !$market->currency->is_active) {
+            throw ValidationException::withMessages(['market_id' => ['Selected sales market is unavailable.']]);
+        }
         $subtotal = 0.0;
         foreach ($data['items'] as $item) {
             $variant = ProductVariant::with('product')->findOrFail($item['variant_id']);
