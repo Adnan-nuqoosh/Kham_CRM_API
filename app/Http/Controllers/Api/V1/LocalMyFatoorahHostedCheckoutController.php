@@ -45,7 +45,8 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
             ]);
         }
 
-        $result = DB::transaction(function () use ($order, $client, $data, $redirect): array {
+        $keyHash = hash('sha256', $data['idempotency_key']);
+        $reservation = DB::transaction(function () use ($order, $data, $keyHash): array {
             $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             if ($locked->payment_status !== PaymentStatus::Pending
                 || in_array($locked->status->value, ['cancelled', 'returned'], true)
@@ -55,21 +56,82 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 ]);
             }
 
-            // Refuse an existing payment attempt rather than creating a second charge.
-            // In particular, a mock_fatoora order cannot be converted into a real attempt.
+            $existing = DB::table('myfatoorah_checkout_reservations')
+                ->where('order_id', $locked->id)->first();
+            if ($existing) {
+                if (!hash_equals((string) $existing->idempotency_key_hash, $keyHash)
+                    || (string) ($existing->payment_method ?? '') !== (string) ($data['payment_method'] ?? '')) {
+                    throw ValidationException::withMessages([
+                        'payment' => ['Order already has a different hosted payment initiation. Reconcile it before retrying.'],
+                    ]);
+                }
+                return ['reservation_id' => $existing->id, 'existing' => true,
+                    'order_number' => $locked->order_number];
+            }
             if ($locked->payments()->exists()) {
                 throw ValidationException::withMessages([
                     'payment' => ['Order already has a payment attempt.'],
                 ]);
             }
+            $id = DB::table('myfatoorah_checkout_reservations')->insertGetId([
+                'order_id' => $locked->id, 'idempotency_key_hash' => $keyHash,
+                'status' => 'reserved', 'amount' => $locked->grand_total,
+                'currency_code' => $locked->currency_code,
+                'payment_method' => $data['payment_method'] ?? null,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            return ['reservation_id' => $id, 'existing' => false,
+                'order_number' => $locked->order_number];
+        }, 3);
 
+        if ($reservation['existing']) {
+            $stored = DB::table('myfatoorah_checkout_reservations')
+                ->where('id', $reservation['reservation_id'])->first();
+            if ($stored->status === 'initiated' && $stored->invoice_id && $stored->payment_url) {
+                $payment = DB::table('payments')->where('provider', 'myfatoorah')
+                    ->where('transaction_reference', $stored->invoice_id)
+                    ->where('order_id', $order->id)->first();
+                if ($payment) {
+                    return ApiResponse::success([
+                        'order_number' => $reservation['order_number'],
+                        'payment_attempt_id' => $payment->id,
+                        'invoice_id' => $stored->invoice_id,
+                        'payment_url' => $stored->payment_url,
+                        'payment_status' => $payment->status, 'sandbox' => true,
+                    ], 'Existing sandbox hosted payment returned; no new provider call.',
+                        'SANDBOX_HOSTED_PAYMENT_REUSED', 200)->header('Cache-Control', 'no-store');
+                }
+            }
+            return ApiResponse::success([
+                'order_number' => $reservation['order_number'],
+                'initiation_status' => $stored->status,
+                'payment_status' => 'pending', 'sandbox' => true,
+            ], 'Previous provider initiation is unresolved. Do not start another payment; reconcile manually.',
+                'SANDBOX_HOSTED_PAYMENT_UNRESOLVED', 202)->header('Cache-Control', 'no-store');
+        }
+
+        // Commit reservation before the network call. Never hold an order lock
+        // while waiting for MyFatoorah.
+        DB::table('myfatoorah_checkout_reservations')
+            ->where('id', $reservation['reservation_id'])
+            ->update(['status' => 'requesting', 'provider_requested_at' => now(), 'updated_at' => now()]);
+        try {
             $response = $client->createHostedPayment(
-                (string) $locked->grand_total,
+                (string) $order->grand_total,
                 $redirect,
                 $data['idempotency_key'],
                 $data['payment_method'] ?? null
             );
+        } catch (\Throwable $e) {
+            DB::table('myfatoorah_checkout_reservations')
+                ->where('id', $reservation['reservation_id'])
+                ->update(['status' => 'uncertain', 'updated_at' => now()]);
+            throw $e;
+        }
 
+        try {
+            $result = DB::transaction(function () use ($order, $response, $keyHash, $reservation): array {
+                $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             // Fail closed if the provider invoice is already linked to another attempt.
             // A database uniqueness constraint is still required for cross-order races.
             if (DB::table('payments')->where('provider', 'myfatoorah')
@@ -88,10 +150,17 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 'currency_code' => $locked->currency_code,
                 'payload' => [
                     'sandbox' => true,
-                    'idempotency_key_hash' => hash('sha256', $data['idempotency_key']),
+                    'idempotency_key_hash' => $keyHash,
                     'payment_url' => $response['payment_url'],
                 ],
             ]);
+
+            DB::table('myfatoorah_checkout_reservations')
+                ->where('id', $reservation['reservation_id'])->update([
+                    'status' => 'initiated', 'invoice_id' => $response['invoice_id'],
+                    'payment_url' => $response['payment_url'],
+                    'resolved_at' => now(), 'updated_at' => now(),
+                ]);
 
             return [
                 'order_number' => $locked->order_number,
@@ -101,7 +170,13 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 'payment_status' => 'pending',
                 'sandbox' => true,
             ];
-        }, 3);
+            }, 3);
+        } catch (\Throwable $e) {
+            DB::table('myfatoorah_checkout_reservations')
+                ->where('id', $reservation['reservation_id'])
+                ->update(['status' => 'uncertain', 'updated_at' => now()]);
+            throw $e;
+        }
 
         return ApiResponse::success(
             $result,
