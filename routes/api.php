@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\{
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
+use App\Http\Controllers\Api\V1\IngredientController;
 use App\Http\Controllers\Api\V1\MarketTaxRuleController;
 use App\Http\Controllers\Api\V1\OrderRefundRequestController;
 use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
@@ -28,6 +29,8 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/ingredients', [IngredientController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/ingredients/{slug}', [IngredientController::class, 'publicShow'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
         ->middleware('throttle:storefront-quote');
     Route::get('/storefront/products/{product}', [PublicStorefrontCatalogController::class, 'show'])
@@ -59,6 +62,11 @@ Route::prefix('v1')->group(function () {
             Route::get('/brands', [CatalogController::class, 'brands']);
             Route::get('/brands/{brand}', [CatalogController::class, 'showBrand']);
         });
+
+        Route::get('/ingredients', [IngredientController::class, 'index'])->middleware('permission:products.view');
+        Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show'])->middleware('permission:products.view');
+        Route::post('/ingredients', [IngredientController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/ingredients/{ingredient}', [IngredientController::class, 'update'])->middleware('permission:products.manage');
 
         Route::middleware('permission:products.manage')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
