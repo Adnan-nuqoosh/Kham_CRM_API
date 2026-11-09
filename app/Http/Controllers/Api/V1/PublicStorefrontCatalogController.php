@@ -83,6 +83,7 @@ class PublicStorefrontCatalogController extends Controller
         return [
             'id' => $product->id,
             'slug' => $product->slug,
+            'badges' => app(\\App\\Services\\StorefrontProductBadgeService::class)->badges($product, (int) $market->id),
             'locale' => $locale,
             'name' => StorefrontLocale::text($product->name, $product->name_ar, $locale),
             'short_description' => StorefrontLocale::text($product->short_description, $product->short_description_ar, $locale),
