@@ -347,7 +347,7 @@ paths:
                   code: {type: string, example: STOREFRONT_PRODUCTS}
                   data:
                     type: array
-                        items:
+                    items:
                       type: object
                       required: [id, slug, name, currency_code, variants]
                       properties:
