@@ -254,6 +254,8 @@ class CatalogController extends Controller
         return [
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => [$required, 'string', 'max:255'],
+            'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'description_ar' => ['sometimes', 'nullable', 'string'],
             'slug' => [$required, 'string', 'max:255', Rule::unique('categories', 'slug')->ignore($category?->id)],
             'description' => ['nullable', 'string'],
             'image_url' => ['nullable', 'string', 'max:2048'],
@@ -269,6 +271,8 @@ class CatalogController extends Controller
 
         return [
             'name' => [$required, 'string', 'max:255'],
+            'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'description_ar' => ['sometimes', 'nullable', 'string'],
             'slug' => [$required, 'string', 'max:255', Rule::unique('brands', 'slug')->ignore($brand?->id)],
             'origin_country' => ['nullable', 'string', 'size:2'],
             'description' => ['nullable', 'string'],
