@@ -57,7 +57,9 @@ try {
         'variant_id' => $variant->id, 'on_hand' => 10, 'reserved' => 0, 'damaged' => 0]);
     $order = app(OrderService::class)->create(['market_id' => $market->id,
         'items' => [['variant_id' => $variant->id, 'quantity' => 1]],
-        'shipping_mode' => 'manual', 'shipping_total' => 0, 'tax_total' => 0]);
+        'shipping_mode' => 'manual', 'shipping_total' => 0, 'tax_total' => 0,
+        'shipping_address' => ['first_name' => 'Local', 'line1' => 'Rollback only',
+            'city' => 'Cairo', 'country_code' => $market->country_code]]);
     $payment = $order->payments()->create([
         'provider' => 'myfatoorah', 'method' => 'hosted',
         'transaction_reference' => (string) random_int(100000000, 999999999),
