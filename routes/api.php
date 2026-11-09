@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/partners/apply', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'store'])->middleware('throttle:login');
     Route::post('/storefront/newsletter/subscribe', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'subscribe'])->middleware('throttle:login');
     Route::post('/storefront/newsletter/unsubscribe', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'unsubscribe'])->middleware('throttle:login');
     Route::get('/storefront/products/{product}/reviews', [ProductReviewController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
@@ -79,6 +80,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/product-reviews', [ProductReviewController::class, 'adminIndex'])->middleware('permission:products.view');
         Route::post('/product-reviews', [ProductReviewController::class, 'store'])->middleware('permission:products.manage');
         Route::patch('/product-reviews/{review}/moderate', [ProductReviewController::class, 'moderate'])->middleware('permission:products.manage');
+        Route::get('/partner-applications', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'index'])->middleware('permission:customers.view');
+        Route::get('/partner-applications/{application}', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'show'])->middleware('permission:customers.view');
+        Route::patch('/partner-applications/{application}', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'update'])->middleware('permission:customers.manage');
         Route::get('/newsletter/subscribers', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'index'])->middleware('permission:customers.view');
         Route::patch('/newsletter/subscribers/{subscriber}', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'update'])->middleware('permission:customers.manage');
         Route::get('/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'adminIndex'])->middleware('permission:products.view');
