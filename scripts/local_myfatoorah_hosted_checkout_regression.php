@@ -201,6 +201,35 @@ try {
             'Provider enquiry rejects mismatched amount without settlement');
     }
 
+    foreach ([
+        'invoice mismatch' => ['Invoice', 'Id', '987654321012345'],
+        'payment mismatch' => ['Transaction', 'PaymentId', '987654321012345'],
+        'currency mismatch' => ['Amount', 'DisplayCurrency', 'ZZZ'],
+    ] as $label => [$section, $field, $value]) {
+        $wrongDetails = $providerDetails;
+        $wrongDetails[$section][$field] = $value;
+        $fakeEnquiry($wrongDetails);
+        try {
+            $enquire($order, $providerPaymentId);
+            throw new RuntimeException('FAIL: Provider enquiry accepted ' . $label);
+        } catch (ValidationException $e) {
+            $assert($order->fresh()->payment_status === PaymentStatus::Pending
+                && $order->payments()->sole()->status === PaymentStatus::Pending->value,
+                'Provider enquiry rejects ' . $label . ' without settlement');
+        }
+    }
+
+    $pendingDetails = $providerDetails;
+    $pendingDetails['Invoice']['Status'] = 'PENDING';
+    $pendingDetails['Transaction']['Status'] = 'PENDING';
+    $fakeEnquiry($pendingDetails);
+    [$pendingStatus, $pendingBody] = $enquire($order, $providerPaymentId);
+    $assert($pendingStatus === 200
+        && data_get($pendingBody, 'data.provider_reports_paid') === false
+        && data_get($pendingBody, 'data.reconciliation_status') === 'manual_review_required'
+        && $order->fresh()->payment_status === PaymentStatus::Pending,
+        'Pending provider enquiry reports unpaid and requires manual review');
+
     $fakeEnquiry($providerDetails);
     $unlinkedOrder = $newOrder();
     try {
