@@ -10,6 +10,9 @@ $app = require dirname(__DIR__) . '/bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use App\Models\User;
+use App\Models\Customer;
+use App\Models\Market;
+use App\Services\OrderService;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,8 +69,34 @@ try {
     ]);
     Http::swap(new \Illuminate\Http\Client\Factory());
     Http::preventStrayRequests();
-    $orderId = DB::table('orders')->orderBy('id')->value('id');
-    if (!$orderId) throw new RuntimeException('STOP: Requires an existing local order.');
+    // Build an isolated order instead of relying on existing local orders.
+    $market = Market::where('code', 'AE')->first();
+    $warehouse = DB::table('warehouses')->where('code', 'EG-01')->first();
+    $stock = $warehouse ? DB::table('inventory_stocks')
+        ->where('warehouse_id', $warehouse->id)
+        ->whereRaw('(on_hand - reserved - damaged) >= 1')->first() : null;
+    $variant = $stock ? DB::table('product_variants')->where('id', $stock->variant_id)->first() : null;
+    if (!$market || !$warehouse || !$stock || !$variant) {
+        throw new RuntimeException('STOP: Requires AE market, EG-01 warehouse and stocked variant.');
+    }
+    $stockBefore = DB::table('inventory_stocks')->where('id', $stock->id)->first();
+    DB::table('product_market_prices')->updateOrInsert(
+        ['variant_id' => $variant->id, 'market_id' => $market->id],
+        ['currency_id' => $market->currency_id, 'price' => 115,
+            'compare_at_price' => null, 'starts_at' => null, 'ends_at' => null,
+            'is_active' => 1, 'created_at' => now(), 'updated_at' => now()]
+    );
+    $customer = Customer::create([
+        'first_name' => 'Security Regression',
+        'email' => 'security-customer-' . Str::random(14) . '@example.invalid',
+        'phone' => '+971501234567', 'marketing_opt_in' => false,
+    ]);
+    $order = app(OrderService::class)->create([
+        'market_id' => $market->id, 'customer_id' => $customer->id,
+        'items' => [['variant_id' => $variant->id, 'quantity' => 1]],
+        'shipping_mode' => 'manual', 'shipping_total' => 0, 'tax_total' => 0,
+    ]);
+    $orderId = $order->id;
 
     $uri = '/api/v1/orders/' . $orderId . '/payments/myfatoorah/sandbox-hosted/provider-enquiry';
     [$guestStatus] = $send($uri);
@@ -98,7 +127,10 @@ try {
     [$disabledStatus] = $send($uri, $user);
     $assert($disabledStatus === 404, 'Disabled sandbox enquiry is not accessible');
 
-    $assert($snapshot() === $before, 'Enquiry HTTP checks did not mutate order, payment or reservation counts');
+    $assert(DB::table('orders')->where('id', $orderId)->exists()
+        && DB::table('payments')->where('order_id', $orderId)->count() === 0
+        && DB::table('myfatoorah_checkout_reservations')->where('order_id', $orderId)->count() === 0,
+        'Enquiry HTTP checks did not mutate temporary order payment or reservations');
 } catch (Throwable $e) {
     $exit = 1;
     fwrite(STDERR, get_class($e) . ': ' . $e->getMessage() . PHP_EOL);
