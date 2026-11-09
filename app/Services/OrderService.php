@@ -2,6 +2,7 @@
 namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\ProductStatus;
 use App\Models\Order;
 use App\Models\Market;
 use Illuminate\Validation\ValidationException;
@@ -11,10 +12,38 @@ class OrderService {
  public function __construct(private PricingService $pricing,private CouponService $coupons,private InventoryService $inventory,private FulfillmentWarehouseResolver $warehouses,private ShippingQuoteService $shippingQuotes){}
  public function create(array $payload, bool $allowLocalTestConfiguredShipping = false):Order {
   return DB::transaction(function()use($payload,$allowLocalTestConfiguredShipping){
+   $market=Market::with('currency')->findOrFail($payload['market_id']);
+   if (!$market->is_active || !$market->currency || !$market->currency->is_active) {
+    throw ValidationException::withMessages(['market_id'=>['Selected sales market is unavailable.']]);
+   }
+   $items=$payload['items']??[];
+   if (!is_array($items) || count($items)<1 || count($items)>100) {
+    throw ValidationException::withMessages(['items'=>['Order must contain between 1 and 100 items.']]);
+   }
+   $seen=[];
+   foreach ($items as $item) {
+    $variantId=(int)($item['variant_id']??0);
+    $qty=(int)($item['quantity']??0);
+    if ($variantId<1 || $qty<1 || $qty>10000 || isset($seen[$variantId])) {
+     throw ValidationException::withMessages(['items'=>['Invalid quantity or duplicate variant in order.']]);
+    }
+    $seen[$variantId]=true;
+   }
    $warehouse=$this->warehouses->forMarket((int)$payload['market_id']);
    $warehouseId=$warehouse->id;
    $lines=[];$subtotal=0;
-   foreach($payload['items'] as $item){$variant=ProductVariant::with('product')->findOrFail($item['variant_id']);$price=$this->pricing->priceFor($variant,$payload['market_id']);$qty=(int)$item['quantity'];$line=(float)$price->price*$qty;$subtotal+=$line;$lines[]=compact('variant','qty','price','line');}
+   foreach($items as $item){
+    $variant=ProductVariant::with('product')->findOrFail($item['variant_id']);
+    if (!$variant->is_active || !$variant->product || $variant->product->status !== ProductStatus::Active) {
+     throw ValidationException::withMessages(['items'=>['One or more products are unavailable.']]);
+    }
+    $price=$this->pricing->priceFor($variant,$payload['market_id']);
+    if ((int)$price->currency_id !== (int)$market->currency_id) {
+     throw ValidationException::withMessages(['market_id'=>['Product price currency does not match the market.']]);
+    }
+    $qty=(int)$item['quantity'];$line=(float)$price->price*$qty;
+    $subtotal+=$line;$lines[]=compact('variant','qty','price','line');
+   }
    $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal);
    $mode=$payload['shipping_mode']??'manual';
    $shippingRuleId=null;
