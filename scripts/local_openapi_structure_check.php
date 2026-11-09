@@ -9,7 +9,7 @@ $errors=[];
 if(!preg_match('/^openapi: 3\.0\.\d+$/m',$yaml))$errors[]='Expected OpenAPI 3.0.x declaration';
 if(!preg_match('/^paths:$/m',$yaml)||!preg_match('/^components:$/m',$yaml))$errors[]='Missing paths or components';
 $before=explode("\ncomponents:",$yaml,2)[0];
-$pathCount=[];$operations=[];$placeholderCount=0;
+$pathCount=[];$operations=[];$placeholderCount=0;$partialCount=0;
 $chunks=preg_split('/(?=^  \/api\/v1\/)/m',$before);
 foreach($chunks as $chunk){
  if(!preg_match('/^  (\/api\/v1\/[^\n:]+):/',$chunk,$m))continue;
@@ -21,6 +21,7 @@ foreach($chunks as $chunk){
   if(!preg_match('/^      responses:\s*$/m',$chunk))$errors[]="Missing responses: {$key}";
  }
  $placeholderCount+=substr_count($chunk,'x-documentation-status: route-inventory-only');
+ $partialCount+=substr_count($chunk,'x-documentation-status: partial-contract');
 }
 foreach($pathCount as $path=>$n)if($n!==1)$errors[]="Duplicate path: {$path}";
 foreach($operations as $key=>$n)if($n!==1)$errors[]="Duplicate operation: {$key}";
@@ -28,7 +29,7 @@ preg_match_all('/\$ref:\s*[\x27"]?#\/components\/(schemas|responses|securitySche
 foreach($matches as $ref){
  if(!preg_match('/^    '.preg_quote($ref[2],'/').':\s*$/m',explode("\n  ".$ref[1].":",$yaml,2)[1]??''))$errors[]="Unresolved reference: {$ref[0]}";
 }
-printf("OpenAPI paths: %d | Operations: %d | Inventory-only operations: %d\n",count($pathCount),count($operations),$placeholderCount);
+printf("OpenAPI paths: %d | Operations: %d | Inventory-only: %d | Partial contracts: %d | Unflagged: %d\n",count($pathCount),count($operations),$placeholderCount,$partialCount,count($operations)-$placeholderCount-$partialCount);
 foreach($errors as $error)fwrite(STDERR,"FAIL: {$error}\n");
 if($errors)exit(1);
 echo "PASS: OPENAPI STRUCTURAL GUARDS\n";
