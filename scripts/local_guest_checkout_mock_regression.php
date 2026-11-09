@@ -61,6 +61,17 @@ try {
         ['shipping_fee'=>15,'free_shipping_threshold'=>200,'is_active'=>1,
          'created_at'=>now(),'updated_at'=>now()]);
 
+    // Test-only approved zero-rate tax fixture: no production tax policy change.
+    // The mock endpoint explicitly submits tax_total=0, so this fixture is
+    // required for its configured-shipping validation to pass.
+    $taxApprover=DB::table('users')->orderBy('id')->value('id');
+    if (!$taxApprover) throw new RuntimeException('Need a local user for rollback-only tax approval fixture.');
+    DB::table('market_tax_rules')->updateOrInsert(
+        ['market_id'=>$market->id],
+        ['rate_percent'=>0,'calculation_method'=>'exclusive','tax_shipping'=>0,
+         'is_approved'=>1,'approved_at'=>now(),'approved_by'=>$taxApprover,
+         'updated_at'=>now()]);
+
     $payload=[
         'idempotency_key'=>'local-test-'.Str::random(24),
         'market_id'=>$market->id,
