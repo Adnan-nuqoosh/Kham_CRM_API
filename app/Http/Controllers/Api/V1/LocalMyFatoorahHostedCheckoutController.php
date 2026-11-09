@@ -66,7 +66,8 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                     ]);
                 }
                 return ['reservation_id' => $existing->id, 'existing' => true,
-                    'order_number' => $locked->order_number];
+                    'order_number' => $locked->order_number,
+                    'amount' => (string) $existing->amount];
             }
             if ($locked->payments()->exists()) {
                 throw ValidationException::withMessages([
@@ -81,7 +82,8 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                 'created_at' => now(), 'updated_at' => now(),
             ]);
             return ['reservation_id' => $id, 'existing' => false,
-                'order_number' => $locked->order_number];
+                'order_number' => $locked->order_number,
+                'amount' => (string) $locked->grand_total];
         }, 3);
 
         if ($reservation['existing']) {
@@ -117,7 +119,7 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
             ->update(['status' => 'requesting', 'provider_requested_at' => now(), 'updated_at' => now()]);
         try {
             $response = $client->createHostedPayment(
-                (string) $order->grand_total,
+                $reservation['amount'],
                 $redirect,
                 $data['idempotency_key'],
                 $data['payment_method'] ?? null,
@@ -150,7 +152,8 @@ final class LocalMyFatoorahHostedCheckoutController extends Controller
                     || (string) $stored->order_id !== (string) $locked->id
                     || !hash_equals((string) $stored->idempotency_key_hash, $keyHash)
                     || bccomp((string) $stored->amount, (string) $locked->grand_total, 4) !== 0
-                    || (string) $stored->currency_code !== (string) $locked->currency_code) {
+                    || (string) $stored->currency_code !== (string) $locked->currency_code
+                    || (string) $locked->order_number !== (string) $reservation['order_number']) {
                     throw ValidationException::withMessages([
                         'payment' => ['Hosted reservation or order totals changed. Manual reconciliation required.'],
                     ]);
