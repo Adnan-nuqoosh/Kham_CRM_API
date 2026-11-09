@@ -19,6 +19,8 @@ use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Str;
 
 $host = strtolower((string) config('database.connections.mysql.host', ''));
@@ -108,6 +110,8 @@ $providerFor = static function (array $event, string $amount, string $currency,
     ];
 };
 $fakeProvider = static function (array $details): void {
+    // Replace the facade client so earlier fake callbacks cannot shadow this scenario.
+    Http::swap(new \Illuminate\Http\Client\Factory());
     Http::fake(['apitest.myfatoorah.com/v3/payments/*' => Http::response([
         'IsSuccess' => true, 'Data' => $details,
     ], 200)]);
@@ -116,6 +120,9 @@ $fakeProvider = static function (array $details): void {
 $exit = 0;
 DB::beginTransaction();
 try {
+    // This regression intentionally sends more than five callbacks in one run.
+    // Disable the named limiter only within this isolated CLI process.
+    RateLimiter::for('storefront-test-order', static fn () => Limit::none());
     config([
         'commerce.myfatoorah_sandbox_enabled' => true,
         'commerce.myfatoorah_sandbox_webhook_enabled' => true,
@@ -166,7 +173,8 @@ try {
         $order->currency_code, 'PENDING', 'PENDING'));
     [$status, $body] = $send($event, $sign($event));
     $assert($status === 202 && data_get($body, 'code') === 'PAYMENT_NOT_CONFIRMED',
-        'Provider pending response does not settle order');
+        'Provider pending response does not settle order (HTTP ' . $status
+            . ', code ' . (string) data_get($body, 'code', 'none') . ')');
     $assert($order->fresh()->payment_status === PaymentStatus::Pending
         && DB::table('myfatoorah_webhook_receipts')->where('provider_invoice_id', $invoice)->count() === 0,
         'Pending webhook creates no receipt or paid transition');
