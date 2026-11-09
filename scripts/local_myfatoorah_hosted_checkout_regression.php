@@ -127,6 +127,18 @@ try {
             'Duplicate initiation blocked without a second payment');
     }
 
+    // A provider invoice must never be assigned to two different orders.
+    $collision = $newOrder();
+    $fake(['InvoiceId' => $invoice, 'PaymentURL' => $url]);
+    try {
+        $invoke($collision);
+        throw new RuntimeException('FAIL: Duplicate provider invoice was accepted');
+    } catch (ValidationException $e) {
+        $assert($collision->payments()->count() === 0
+            && $order->payments()->count() === 1,
+            'Duplicate provider invoice cannot attach to another order');
+    }
+
     $failed = $newOrder();
     $fake([], 503, false);
     try {
