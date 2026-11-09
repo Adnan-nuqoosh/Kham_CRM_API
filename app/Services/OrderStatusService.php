@@ -43,12 +43,18 @@ class OrderStatusService
             $locked->load('items');
 
             if ($next === OrderStatus::Cancelled
-                && in_array($locked->payment_status, [
+                && (in_array($locked->payment_status, [
                     PaymentStatus::Authorized,
                     PaymentStatus::Paid,
                     PaymentStatus::PartiallyRefunded,
                     PaymentStatus::Refunded,
-                ], true)) {
+                ], true)
+                || $locked->payments()->whereIn('status', [
+                    PaymentStatus::Authorized->value,
+                    PaymentStatus::Paid->value,
+                    PaymentStatus::PartiallyRefunded->value,
+                    PaymentStatus::Refunded->value,
+                ])->exists())) {
                 throw ValidationException::withMessages([
                     'status' => ['Cancellation requires payment reconciliation and an approved refund workflow. No automatic refund has been initiated.'],
                 ]);
