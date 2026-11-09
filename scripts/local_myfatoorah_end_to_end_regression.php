@@ -156,7 +156,7 @@ try {
     $paymentId = (string) random_int(100000000, 999999999);
     // The actual hosted controller must create the pending attempt; no manual seeding.
     $url = 'https://example.invalid/sandbox/pay/' . Str::random(20);
-    Http::swap(new \\Illuminate\\Http\\Client\\Factory());
+    Http::swap(new \Illuminate\Http\Client\Factory());
     Http::fake(['apitest.myfatoorah.com/v3/payments' => Http::response([
         'IsSuccess' => true,
         'Data' => ['InvoiceId' => $invoice, 'PaymentURL' => $url],
