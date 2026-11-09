@@ -139,6 +139,41 @@ try {
             'Duplicate provider invoice cannot attach to another order');
     }
 
+    // Exercise the database index directly, bypassing the controller's guard.
+    // This catches regressions where concurrent requests could attach one
+    // provider invoice to two orders despite passing application validation.
+    $indexCollision = $newOrder();
+    try {
+        $indexCollision->payments()->create([
+            'provider' => 'myfatoorah',
+            'method' => 'hosted',
+            'transaction_reference' => $invoice,
+            'status' => PaymentStatus::Pending->value,
+            'amount' => $indexCollision->grand_total,
+            'currency_code' => $indexCollision->currency_code,
+            'payload' => ['sandbox' => true],
+        ]);
+        throw new RuntimeException('FAIL: Database accepted duplicate provider invoice');
+    } catch (\Illuminate\Database\QueryException $e) {
+        $assert($indexCollision->payments()->count() === 0
+            && $order->payments()->count() === 1,
+            'Database unique index rejects duplicate provider invoice');
+    }
+
+    // The same reference from a DIFFERENT provider remains legal.
+    $otherProvider = $newOrder();
+    $otherProvider->payments()->create([
+        'provider' => 'other_provider',
+        'method' => 'hosted',
+        'transaction_reference' => $invoice,
+        'status' => PaymentStatus::Pending->value,
+        'amount' => $otherProvider->grand_total,
+        'currency_code' => $otherProvider->currency_code,
+        'payload' => ['sandbox' => true],
+    ]);
+    $assert($otherProvider->payments()->count() === 1,
+        'Database unique index permits same reference for different provider');
+
     $failed = $newOrder();
     $fake([], 503, false);
     try {
