@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +41,18 @@ class OrderStatusService
 
             $inventory = app(InventoryService::class);
             $locked->load('items');
+
+            if ($next === OrderStatus::Cancelled
+                && in_array($locked->payment_status, [
+                    PaymentStatus::Authorized,
+                    PaymentStatus::Paid,
+                    PaymentStatus::PartiallyRefunded,
+                    PaymentStatus::Refunded,
+                ], true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Cancellation requires payment reconciliation and an approved refund workflow. No automatic refund has been initiated.'],
+                ]);
+            }
 
             if ($next === OrderStatus::Cancelled) {
                 foreach ($locked->items as $item) {
