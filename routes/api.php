@@ -10,11 +10,55 @@ use App\Http\Controllers\Api\V1\{
     MediaController,
     OrderController,
     PricingController,
-    ProductController
+    ProductController,
+    ShippingRuleController,
+    CheckoutQuoteController,
+    FinanceExpenseController,
+    FinanceReportController
 };
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
+use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
+use App\Http\Controllers\Api\V1\IngredientController;
+use App\Http\Controllers\Api\V1\RitualQuizController;
+use App\Http\Controllers\Api\V1\ProductReviewController;
+use App\Http\Controllers\Api\V1\MarketTaxRuleController;
+use App\Http\Controllers\Api\V1\OrderRefundRequestController;
+use App\Http\Controllers\Api\V1\LocalGuestCheckoutController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahWebhookController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahHostedCheckoutController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
+use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/community', \App\Http\Controllers\Api\V1\PublicCommunityController::class)->middleware('throttle:storefront-quote');
+    Route::get('/storefront/homepage', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::post('/storefront/partners/apply', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'store'])->middleware('throttle:login');
+    Route::post('/storefront/newsletter/subscribe', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'subscribe'])->middleware('throttle:login');
+    Route::post('/storefront/newsletter/unsubscribe', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'unsubscribe'])->middleware('throttle:login');
+    Route::get('/storefront/products/{product}/reviews', [ProductReviewController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/ritual-quiz/questions', [RitualQuizController::class, 'questions'])->middleware('throttle:storefront-quote');
+    Route::post('/storefront/ritual-quiz/recommendations', [RitualQuizController::class, 'recommend'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/ingredients', [IngredientController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/ingredients/{slug}', [IngredientController::class, 'publicShow'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/rituals/{slug}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'publicShow'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/brands', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'index'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/brands/{slug}', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'show'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
+        ->middleware('throttle:storefront-quote');
+    Route::get('/storefront/products/{product}', [PublicStorefrontCatalogController::class, 'show'])
+        ->middleware('throttle:storefront-quote');
+
+    // Disabled by default; controller also rejects non-local environments.
+    Route::post('/storefront/payments/myfatoorah/local-webhook', LocalMyFatoorahWebhookController::class)
+        ->middleware('throttle:storefront-test-order');
+    Route::post('/storefront/checkout/test-order', LocalGuestCheckoutController::class)
+        ->middleware('throttle:storefront-test-order');
+    Route::post('/storefront/checkout/quote', PublicCheckoutQuoteController::class)
+        ->middleware('throttle:storefront-quote');
+    Route::post('/auth/forgot-password', [\App\Http\Controllers\Api\V1\PasswordRecoveryController::class, 'forgot'])->middleware('throttle:login');
+    Route::post('/auth/reset-password', [\App\Http\Controllers\Api\V1\PasswordRecoveryController::class, 'reset'])->middleware('throttle:login');
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::middleware('auth:sanctum')->group(function () {
@@ -34,6 +78,34 @@ Route::prefix('v1')->group(function () {
             Route::get('/brands', [CatalogController::class, 'brands']);
             Route::get('/brands/{brand}', [CatalogController::class, 'showBrand']);
         });
+
+        Route::get('/product-reviews', [ProductReviewController::class, 'adminIndex'])->middleware('permission:products.view');
+        Route::post('/product-reviews', [ProductReviewController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/product-reviews/{review}/moderate', [ProductReviewController::class, 'moderate'])->middleware('permission:products.manage');
+        Route::get('/homepage/sections', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'index'])->middleware('permission:products.view');
+        Route::post('/homepage/sections', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/homepage/sections/{section}', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/homepage/sections/{section}', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'destroy'])->middleware('permission:products.manage');
+        Route::get('/partner-applications', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'index'])->middleware('permission:customers.view');
+        Route::get('/partner-applications/{application}', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'show'])->middleware('permission:customers.view');
+        Route::patch('/partner-applications/{application}', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'update'])->middleware('permission:customers.manage');
+        Route::get('/newsletter/subscribers', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'index'])->middleware('permission:customers.view');
+        Route::patch('/newsletter/subscribers/{subscriber}', [\App\Http\Controllers\Api\V1\NewsletterSubscriberController::class, 'update'])->middleware('permission:customers.manage');
+        Route::get('/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'adminIndex'])->middleware('permission:products.view');
+        Route::get('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'adminShow'])->middleware('permission:products.view');
+        Route::post('/rituals', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'update'])->middleware('permission:products.manage');
+        Route::delete('/rituals/{ritual}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'destroy'])->middleware('permission:products.manage');
+        Route::get('/ritual-quiz/questions', [RitualQuizController::class, 'adminIndex'])->middleware('permission:products.view');
+        Route::post('/ritual-quiz/questions', [RitualQuizController::class, 'storeQuestion'])->middleware('permission:products.manage');
+        Route::patch('/ritual-quiz/questions/{question}', [RitualQuizController::class, 'updateQuestion'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/questions/{question}/options', [RitualQuizController::class, 'storeOption'])->middleware('permission:products.manage');
+        Route::patch('/ritual-quiz/options/{option}', [RitualQuizController::class, 'updateOption'])->middleware('permission:products.manage');
+        Route::put('/ritual-quiz/options/{option}/products', [RitualQuizController::class, 'syncProducts'])->middleware('permission:products.manage');
+        Route::get('/ingredients', [IngredientController::class, 'index'])->middleware('permission:products.view');
+        Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show'])->middleware('permission:products.view');
+        Route::post('/ingredients', [IngredientController::class, 'store'])->middleware('permission:products.manage');
+        Route::patch('/ingredients/{ingredient}', [IngredientController::class, 'update'])->middleware('permission:products.manage');
 
         Route::middleware('permission:products.manage')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
@@ -99,10 +171,59 @@ Route::prefix('v1')->group(function () {
         Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])
             ->middleware('permission:coupons.manage');
 
+        // Authenticated CRM quote: tax is deliberately not configured yet.
+        Route::post('/checkout/quote', CheckoutQuoteController::class)
+            ->middleware('permission:orders.manage');
+
+        Route::get('/market-tax-rules', [MarketTaxRuleController::class, 'index'])
+            ->middleware('permission:settings.manage');
+        Route::put('/markets/{market}/tax-rule', [MarketTaxRuleController::class, 'upsert'])
+            ->middleware('permission:settings.manage');
+        // Approval requires a separate permission, never granted by the API.
+        Route::post('/markets/{market}/tax-rule/approve', [MarketTaxRuleController::class, 'approve'])
+            ->middleware('permission:tax.approve');
+
+        Route::get('/shipping-rules', [ShippingRuleController::class, 'index'])
+            ->middleware('permission:settings.manage');
+        Route::post('/shipping-rules', [ShippingRuleController::class, 'store'])
+            ->middleware('permission:settings.manage');
+        Route::patch('/shipping-rules/{shippingRule}', [ShippingRuleController::class, 'update'])
+            ->middleware('permission:settings.manage');
+
+        Route::get('/finance/report/export.csv', [FinanceReportController::class, 'exportCsv'])
+            ->middleware('permission:finance.view');
+        Route::get('/finance/report', [FinanceReportController::class, 'summary'])
+            ->middleware('permission:finance.view');
+        Route::get('/finance/expenses', [FinanceExpenseController::class, 'index'])
+            ->middleware('permission:finance.view');
+        Route::post('/finance/expenses', [FinanceExpenseController::class, 'store'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/expenses/{expense}', [FinanceExpenseController::class, 'update'])
+            ->middleware('permission:finance.manage');
+        Route::delete('/finance/expenses/{expense}', [FinanceExpenseController::class, 'destroy'])
+            ->middleware('permission:finance.manage');
+        Route::patch('/finance/order-items/{item}/cost', [FinanceExpenseController::class, 'setItemCost'])
+            ->middleware('permission:finance.manage');
+
+        Route::get('/orders/{order}/refund-requests', [OrderRefundRequestController::class, 'index'])
+            ->middleware('permission:orders.view');
+        Route::post('/orders/{order}/refund-requests', [OrderRefundRequestController::class, 'store'])
+            ->middleware('permission:orders.manage');
+        Route::get('/refund-requests/{refund}/audit', [OrderRefundRequestController::class, 'audit'])
+            ->middleware('permission:refunds.approve');
+        Route::post('/refund-requests/{refund}/approve', [OrderRefundRequestController::class, 'approve'])
+            ->middleware('permission:refunds.approve');
+
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
         Route::get('/orders/{order}', [OrderController::class, 'show'])
             ->middleware('permission:orders.view');
+        Route::post('/orders/{order}/payments/myfatoorah/sandbox-hosted/provider-enquiry', LocalMyFatoorahProviderEnquiryController::class)
+            ->middleware(['permission:orders.manage', 'throttle:storefront-test-order']);
+        Route::get('/orders/{order}/payments/myfatoorah/sandbox-hosted/status', LocalMyFatoorahReservationStatusController::class)
+            ->middleware(['permission:orders.view', 'throttle:storefront-test-order']);
+        Route::post('/orders/{order}/payments/myfatoorah/sandbox-hosted', LocalMyFatoorahHostedCheckoutController::class)
+            ->middleware(['permission:orders.manage', 'throttle:storefront-test-order']);
         Route::post('/orders', [OrderController::class, 'store'])
             ->middleware('permission:orders.manage');
         Route::patch('/orders/{order}/status', [OrderController::class, 'status'])

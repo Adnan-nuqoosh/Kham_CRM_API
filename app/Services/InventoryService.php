@@ -57,8 +57,14 @@ class InventoryService
     ): void {
         DB::transaction(function () use ($variantId, $warehouseId, $quantity, $referenceId) {
             $stock = $this->lockStock($variantId, $warehouseId);
+            if ($quantity < 1 || $stock->reserved < $quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => ['Cannot release more stock than is currently reserved.'],
+                ]);
+            }
+
             $stock->update([
-                'reserved' => max(0, $stock->reserved - $quantity),
+                'reserved' => $stock->reserved - $quantity,
             ]);
 
             InventoryMovement::create([
@@ -84,15 +90,15 @@ class InventoryService
         DB::transaction(function () use ($variantId, $warehouseId, $quantity, $referenceId) {
             $stock = $this->lockStock($variantId, $warehouseId);
 
-            if ($stock->on_hand < $quantity) {
+            if ($quantity < 1 || $stock->on_hand < $quantity || $stock->reserved < $quantity) {
                 throw ValidationException::withMessages([
-                    'quantity' => ['Insufficient on-hand stock.'],
+                    'quantity' => ['Cannot ship stock without sufficient on-hand quantity and an existing reservation.'],
                 ]);
             }
 
             $stock->update([
                 'on_hand' => $stock->on_hand - $quantity,
-                'reserved' => max(0, $stock->reserved - $quantity),
+                'reserved' => $stock->reserved - $quantity,
             ]);
 
             InventoryMovement::create([

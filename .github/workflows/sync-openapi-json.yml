@@ -1,0 +1,35 @@
+name: Sync OpenAPI JSON from YAML
+on:
+  push:
+    branches:
+      - feature/myfatoorah-v3-webhook-verification-20261108
+    paths:
+      - docs/openapi.yaml
+      - .github/workflows/sync-openapi-json.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate JSON from canonical YAML
+        run: npx --yes @redocly/cli@2 bundle docs/openapi.yaml --output docs/openapi.json
+      - name: Verify generated JSON and route count
+        run: |
+          node -e "const j=require('./docs/openapi.json'); const n=Object.values(j.paths).reduce((s,p)=>s+Object.keys(p).filter(k=>['get','post','put','patch','delete','options','head','trace'].includes(k)).length,0); if(n!==117 || !j.paths['/api/v1/storefront/community']) process.exit(1); console.log('Verified operations:',n)"
+      - name: Commit updated JSON if changed
+        run: |
+          if ! git diff --quiet -- docs/openapi.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/openapi.json
+            git commit -m "docs(openapi): sync JSON with canonical YAML"
+            git push
+          fi

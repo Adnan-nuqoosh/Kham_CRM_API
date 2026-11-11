@@ -13,7 +13,7 @@ class ProductStoreRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['metadata', 'variants', 'image_alt_texts'] as $field) {
+        foreach (['metadata', 'variants', 'image_alt_texts', 'ingredient_ids'] as $field) {
             $value = $this->input($field);
 
             if (is_string($value)) {
@@ -36,6 +36,13 @@ class ProductStoreRequest extends FormRequest
             'brand_id' => ['nullable', 'exists:brands,id'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'name' => [$requiredOnCreate, 'string', 'max:255'],
+            'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'short_description_ar' => ['sometimes', 'nullable', 'string'],
+            'description_ar' => ['sometimes', 'nullable', 'string'],
+            'ingredients_ar' => ['sometimes', 'nullable', 'string'],
+            'usage_instructions_ar' => ['sometimes', 'nullable', 'string'],
+            'seo_title_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'seo_description_ar' => ['sometimes', 'nullable', 'string'],
             'slug' => [$requiredOnCreate, 'string', 'max:255', Rule::unique('products', 'slug')->ignore($productId)],
             'short_description' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
@@ -46,6 +53,8 @@ class ProductStoreRequest extends FormRequest
             'seo_title' => ['nullable', 'string', 'max:255'],
             'seo_description' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
+            'ingredient_ids' => ['sometimes', 'array', 'max:100'],
+            'ingredient_ids.*' => ['required', 'integer', 'distinct', 'exists:ingredients,id'],
 
             'images' => ['sometimes', 'array', 'min:1', 'max:10'],
             'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
@@ -60,6 +69,7 @@ class ProductStoreRequest extends FormRequest
             'variants.*.option_values' => ['nullable', 'array'],
             'variants.*.weight_grams' => ['nullable', 'integer', 'min:0'],
             'variants.*.cost_price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.cost_currency_code' => ['nullable', 'string', 'size:3', Rule::exists('currencies', 'code')->where('is_active', true)],
             'variants.*.is_active' => ['boolean'],
 
             'variants.*.prices' => ['sometimes', 'array'],

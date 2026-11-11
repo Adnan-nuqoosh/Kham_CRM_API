@@ -1,0 +1,2801 @@
+openapi: 3.0.3
+info:
+  title: KHAM Commerce OS API
+  version: 1.0.0
+  description: |
+    Laravel API route/method inventory and documented request/response contracts.
+    Contract accuracy requires ongoing review against controller behavior and local tests.
+    See docs/API_DOCUMENTATION.md.
+servers:
+  - url: http://localhost
+    description: Local XAMPP (replace with your own base URL)
+tags:
+  - name: Authentication
+    description: CRM authentication and password recovery
+  - name: Community
+    description: Public config-backed community page
+  - name: CRM
+    description: Authenticated commerce administration
+  - name: Homepage
+    description: Public homepage and CRM homepage content management
+  - name: Ingredients
+    description: Ingredient administration
+  - name: Media
+    description: Catalog image uploads and removal
+  - name: Newsletter
+    description: Newsletter subscriptions and subscriber administration
+  - name: Partners
+    description: Partner application submission and review
+  - name: Product Reviews
+    description: Product ratings and review moderation
+  - name: Rituals
+    description: Ritual content administration
+  - name: Sandbox Payments
+    description: Local and testing-only payment and checkout workflows
+  - name: Storefront
+    description: Public storefront catalog and checkout
+  - name: Storefront Brands
+    description: Public brand discovery
+  - name: Storefront Ingredients
+    description: Public ingredient discovery
+  - name: Storefront Rituals
+    description: Public ritual content
+security: []
+paths:
+  /api/v1/storefront/community:
+    get:
+      operationId: get_storefront_community
+      tags: [Community]
+      summary: Public community page content from approved configuration
+      description: 'Static/config-backed phase; sections and links are empty until approved content is supplied. No member submissions or CRM editor.'
+      parameters:
+        - in: query
+          name: locale
+          schema: {type: string, enum: [en, ar], default: en}
+      responses:
+        '200':
+          description: 'Community page content; STOREFRONT_COMMUNITY'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [locale, title, intro, sections, links]
+                        properties:
+                          locale: {type: string, enum: [en, ar]}
+                          title: {type: string}
+                          intro: {type: string}
+                          sections:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                key: {type: string, nullable: true}
+                                title: {type: string}
+                                body: {type: string}
+                                image_url: {type: string, nullable: true}
+                                link_url: {type: string, nullable: true}
+                          links: {type: array, items: {type: object}}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+  /api/v1/storefront/homepage:
+    get:
+      operationId: get_storefront_homepage
+      tags: [Homepage]
+      summary: Published homepage sections in English or Arabic
+      parameters:
+        - in: query
+          name: locale
+          schema: {type: string, enum: [en, ar], default: en}
+      responses:
+        '200':
+          description: Published sections ordered by sort_order then id
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/PublicHomepageSection'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/homepage/sections:
+    get:
+      operationId: get_homepage_sections
+      tags: [Homepage]
+      summary: CRM homepage section listing (products.view)
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: type
+          schema: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
+      responses:
+        '200': {description: 'Paginated section listing'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_homepage_sections
+      tags: [Homepage]
+      summary: Create homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HomepageSectionInput'}
+      responses:
+        '201': {description: 'Section created'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/homepage/sections/{section}:
+    parameters:
+      - in: path
+        name: section
+        required: true
+        schema: {type: integer}
+    patch:
+      operationId: patch_homepage_sections_by_section
+      tags: [Homepage]
+      summary: Update homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HomepageSectionInput'}
+      responses:
+        '200': {description: 'Section updated'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: 'Section not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_homepage_sections_by_section
+      tags: [Homepage]
+      summary: Delete homepage section (products.manage)
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Section deleted'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: 'Section not found'}
+  /api/v1/storefront/partners/apply:
+    post:
+      operationId: post_storefront_partners_apply
+      tags: [Partners]
+      summary: Submit partner application (rate limited)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PartnerApplicationInput'}
+      responses:
+        '201':
+          description: Application accepted; no applicant PII returned
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+  /api/v1/partner-applications:
+    get:
+      operationId: get_partner_applications
+      tags: [Partners]
+      summary: CRM applications listing (customers.view)
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [pending, in_review, approved, rejected]}
+        - in: query
+          name: partner_type
+          schema: {type: string, enum: [retailer, distributor, influencer, corporate, other]}
+      responses:
+        '200': {description: 'Paginated applications including applicant PII; CRM only'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/v1/partner-applications/{application}:
+    parameters:
+      - in: path
+        name: application
+        required: true
+        schema: {type: integer}
+    get:
+      operationId: get_partner_applications_by_application
+      tags: [Partners]
+      summary: CRM application detail (customers.view)
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Application details; CRM only'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: 'Application not found'}
+    patch:
+      operationId: patch_partner_applications_by_application
+      tags: [Partners]
+      summary: Review application (customers.manage)
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [pending, in_review, approved, rejected]}
+                internal_notes: {type: string, nullable: true, maxLength: 5000}
+      responses:
+        '200': {description: 'Updated application with reviewer metadata'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: 'Application not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/storefront/newsletter/subscribe:
+    post:
+      operationId: post_storefront_newsletter_subscribe
+      tags: [Newsletter]
+      summary: Subscribe or resubscribe email (rate limited)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+      responses:
+        '200': {description: 'Subscription request processed'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+  /api/v1/storefront/newsletter/unsubscribe:
+    post:
+      operationId: post_storefront_newsletter_unsubscribe
+      tags: [Newsletter]
+      summary: Process unsubscribe token without disclosing subscription status
+      description: Returns the same success envelope whether or not the token matches an active subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string, minLength: 64, maxLength: 64}
+      responses:
+        '200': {description: 'NEWSLETTER_UNSUBSCRIBE_RECEIVED; data is null'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+
+  /api/v1/storefront/products/{product}/reviews:
+    parameters:
+      - in: path
+        name: product
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_storefront_products_by_product_reviews
+      tags: [Product Reviews]
+      summary: Approved reviews and rating summary for active product
+      parameters:
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+        - in: query
+          name: per_page
+          schema: {type: integer, minimum: 1, maximum: 50, default: 10}
+      responses:
+        '200': {description: 'PRODUCT_REVIEWS; data has reviews, review_count and average_rating'}
+        '404': {description: 'Product inactive or not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/ritual-quiz/questions:
+    get:
+      operationId: get_storefront_ritual_quiz_questions
+      tags: [Storefront]
+      summary: 'Active localized quiz questions and options'
+      responses:
+        '200': {description: 'RITUAL_QUIZ'}
+        '400': {description: 'Malformed request'}
+
+  /api/v1/storefront/ritual-quiz/recommendations:
+    post:
+      operationId: post_storefront_ritual_quiz_recommendations
+      tags: [Storefront]
+      summary: 'Recommend market-eligible products from selected quiz options'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                market_id: {description: 'Validated by controller'}
+                option_ids: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'RITUAL_RECOMMENDATIONS'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/ingredients:
+    get:
+      operationId: get_storefront_ingredients
+      tags: [Storefront Ingredients]
+      summary: List active ingredients with localized names and descriptions
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
+      responses:
+        '200': {description: 'STOREFRONT_INGREDIENTS; paginated active ingredient list'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/ingredients/{slug}:
+    parameters:
+      - in: path
+        name: slug
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_storefront_ingredients_by_slug
+      tags: [Storefront Ingredients]
+      summary: Get an active ingredient by slug
+      responses:
+        '200': {description: 'STOREFRONT_INGREDIENT; localized id, slug, name, description'}
+        '404': {description: 'Ingredient not found or inactive'}
+
+  /api/v1/storefront/rituals:
+    get:
+      operationId: get_storefront_rituals
+      tags: [Storefront Rituals]
+      summary: Paginated published rituals with localized content
+      responses:
+        '200': {description: 'STOREFRONT_RITUALS; published rituals ordered by sort_order and id'}
+        '400': {description: 'Malformed request'}
+
+  /api/v1/storefront/rituals/{slug}:
+    parameters:
+      - in: path
+        name: slug
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_storefront_rituals_by_slug
+      tags: [Storefront Rituals]
+      summary: Published ritual detail including localized steps and active products
+      responses:
+        '200': {description: 'STOREFRONT_RITUAL; ritual fields plus steps and products'}
+        '404': {description: 'Ritual not found or unpublished'}
+
+  /api/v1/storefront/brands:
+    get:
+      operationId: get_storefront_brands
+      tags: [Storefront Brands]
+      summary: Paginated active brands with localized display fields
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200': {description: 'STOREFRONT_BRANDS; localized brand list with pagination meta'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/brands/{slug}:
+    parameters:
+      - in: path
+        name: slug
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_storefront_brands_by_slug
+      tags: [Storefront Brands]
+      summary: Active brand detail and up to 100 active market-eligible products
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200': {description: 'STOREFRONT_BRAND; data contains brand and products arrays'}
+        '404': {description: 'Active brand not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/products:
+    get:
+      operationId: get_storefront_products
+      tags: [Storefront]
+      summary: 'List active market-priced storefront products'
+      description: 'Returns active products with sellable variants, localized fields and availability in the market fulfillment warehouse. No-store response.'
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
+        - in: query
+          name: search
+          schema: {type: string, maxLength: 120}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: 'STOREFRONT_PRODUCTS with pagination metadata'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  code: {type: string, example: STOREFRONT_PRODUCTS}
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, slug, name, currency_code, variants]
+                      properties:
+                        id: {type: integer}
+                        slug: {type: string}
+                        badges: {type: array, items: {type: string}}
+                        locale: {type: string}
+                        name: {type: string}
+                        short_description: {type: string, nullable: true}
+                        description: {type: string, nullable: true}
+                        ingredients: {type: string, nullable: true}
+                        linked_ingredients:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: {type: integer}
+                              slug: {type: string}
+                              name: {type: string}
+                              description: {type: string, nullable: true}
+                        usage_instructions: {type: string, nullable: true}
+                        currency_code: {type: string}
+                        variants:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id: {type: integer}
+                              title: {type: string}
+                              price: {type: string, nullable: true}
+                              in_stock: {type: boolean}
+                  meta: {type: object}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/products/{product}:
+    parameters:
+      - in: path
+        name: product
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_storefront_products_by_product
+      tags: [Storefront]
+      summary: 'Get market-eligible active storefront product'
+      description: 'Inactive or non-sellable products return 404. Localized content and market stock availability; no-store response.'
+      parameters:
+        - in: query
+          name: market_id
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: 'STOREFRONT_PRODUCT'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  code: {type: string, example: STOREFRONT_PRODUCT}
+                  data:
+                    type: object
+                    required: [id, slug, name, currency_code, variants]
+                    properties:
+                      id: {type: integer}
+                      slug: {type: string}
+                      badges: {type: array, items: {type: string}}
+                      locale: {type: string}
+                      name: {type: string}
+                      short_description: {type: string, nullable: true}
+                      description: {type: string, nullable: true}
+                      ingredients: {type: string, nullable: true}
+                      linked_ingredients:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: {type: integer}
+                            slug: {type: string}
+                            name: {type: string}
+                            description: {type: string, nullable: true}
+                      usage_instructions: {type: string, nullable: true}
+                      currency_code: {type: string}
+                      variants:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: {type: integer}
+                            title: {type: string}
+                            price: {type: string, nullable: true}
+                            in_stock: {type: boolean}
+        '404': {description: 'Product not found or unavailable for market'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/payments/myfatoorah/local-webhook:
+    post:
+      operationId: post_storefront_payments_myfatoorah_local_webhook
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only signed MyFatoorah webhook; 64 KiB JSON limit; signed identifiers matched to stored payment and authoritative provider details'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      responses:
+        '200': {description: 'SANDBOX_PAYMENT_VERIFIED'}
+        '202': {description: 'PAYMENT_NOT_CONFIRMED'}
+        '404': {description: 'Endpoint disabled or order not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '400': {description: 'INVALID_WEBHOOK_BODY; invalid JSON or payload exceeds 64 KiB'}
+
+  /api/v1/storefront/checkout/test-order:
+    post:
+      operationId: post_storefront_checkout_test_order
+      tags: [Sandbox Payments]
+      summary: 'Local-only mock checkout; no card collection or real payment; idempotency key and market, cart, customer, address required'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key: {type: string, minLength: 16, maxLength: 128}
+                market_id: {type: integer}
+                items: {type: array, minItems: 1, maxItems: 25, items: {type: object}}
+                payment_method: {type: string, enum: [mock_fatoora]}
+                customer: {type: object}
+                shipping_address: {type: object}
+      responses:
+        '201': {description: 'MOCK_CHECKOUT_ORDER'}
+        '200': {description: 'Idempotent replay'}
+        '404': {description: 'Endpoint disabled or order not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/storefront/checkout/quote:
+    post:
+      operationId: post_storefront_checkout_quote
+      tags: [Storefront]
+      summary: 'Public non-binding quote with stock checks and no client prices'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [market_id, items, shipping_address]
+              properties:
+                market_id: {type: integer}
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 25
+                  items:
+                    type: object
+                    required: [variant_id, quantity]
+                    properties:
+                      variant_id: {type: integer}
+                      quantity: {type: integer, minimum: 1, maximum: 100}
+                shipping_address:
+                  type: object
+                  required: [country_code, city]
+                  properties:
+                    country_code: {type: string, minLength: 2, maxLength: 2}
+                    city: {type: string, maxLength: 120}
+              description: 'Client unit_price and coupon_code are prohibited; stock and prices are server verified.'
+      responses:
+        '200':
+          description: 'Provisional quote; final payable total not authorized'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      locale: {type: string}
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            variant_id: {type: integer}
+                            quantity: {type: integer}
+                            product_name: {type: string}
+                            variant_title: {type: string, nullable: true}
+                      market_id: {type: integer}
+                      currency_code: {type: string}
+                      subtotal: {type: string}
+                      discount_total: {type: string}
+                      net_subtotal: {type: string}
+                      shipping: {type: object}
+                      total_before_tax: {type: string}
+                      tax_status: {type: string}
+                      tax_total: {type: string, nullable: true}
+                      is_final_payable_total: {type: boolean}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/auth/forgot-password:
+    post:
+      operationId: post_auth_forgot_password
+      tags: [Authentication]
+      summary: Request CRM password reset without account enumeration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+      responses:
+        '200': {description: 'AUTH_RESET_REQUESTED; same public response for known and unknown emails'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+        '503': {description: 'AUTH_RESET_UNAVAILABLE; secure frontend reset URL not configured'}
+
+  /api/v1/auth/reset-password:
+    post:
+      operationId: post_auth_reset_password
+      tags: [Authentication]
+      summary: Reset CRM password and revoke existing API tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password, password_confirmation]
+              properties:
+                email: {type: string, format: email, maxLength: 255}
+                token: {type: string}
+                password: {type: string, minLength: 12}
+                password_confirmation: {type: string, minLength: 12}
+      responses:
+        '200': {description: 'AUTH_RESET_COMPLETE'}
+        '422': {description: 'Invalid or expired token, mismatched confirmation or invalid input'}
+        '429': {description: 'Rate limit exceeded'}
+
+  /api/v1/auth/login:
+    post:
+      operationId: post_auth_login
+      tags: [Authentication]
+      summary: Authenticate CRM user and issue Sanctum bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+                device_name: {type: string, nullable: true, maxLength: 100}
+      responses:
+        '200': {description: 'AUTH_LOGIN; data contains token, token_type and user with roles.permissions'}
+        '401': {description: 'AUTH_INVALID; invalid email or password'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {description: 'Rate limit exceeded'}
+
+  /api/v1/auth/me:
+    get:
+      operationId: get_auth_me
+      tags: [Authentication]
+      summary: Current authenticated CRM user with roles and permissions
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Current user in ApiResponse data'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+
+  /api/v1/auth/logout:
+    post:
+      operationId: post_auth_logout
+      tags: [Authentication]
+      summary: Revoke the current Sanctum access token
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'AUTH_LOGOUT; data is null'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+
+  /api/v1/dashboard:
+    get:
+      operationId: get_dashboard
+      tags: [CRM]
+      summary: 'CRM dashboard totals, statuses and seven-day sales'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'DASHBOARD'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      orders_today: {type: integer}
+                      revenue_today: {type: number}
+                      orders_week: {type: integer}
+                      revenue_week: {type: number}
+                      pending_orders: {type: integer}
+                      customers_total: {type: integer}
+                      active_products: {type: integer}
+                      low_stock_skus: {type: integer}
+                      orders_by_status: {type: object}
+                      products_by_status: {type: object}
+                      sales_last_7_days: {type: array, items: {type: object}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/products:
+    get:
+      operationId: get_products
+      tags: [CRM]
+      summary: 'Paginated CRM products with variants, prices, stocks and media'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string}
+        - in: query
+          name: search
+          schema: {type: string}
+        - in: query
+          name: page
+          schema: {type: integer}
+      responses:
+        '200':
+          description: 'Paginated CRM products with variants, prices, stocks and media'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_products
+      tags: [CRM]
+      summary: 'Create product with nested variants, prices, stock and optional images'
+      security: [{sanctumBearer: []}]
+      description: 'Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields.'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, slug, status]
+              properties:
+                brand_id: {type: integer}
+                category_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                name_ar: {type: string, nullable: true, maxLength: 255}
+                slug: {type: string, maxLength: 255}
+                status: {type: string, enum: [draft, active, archived]}
+                track_inventory: {type: boolean}
+                short_description: {type: string, nullable: true}
+                short_description_ar: {type: string, nullable: true}
+                description_ar: {type: string, nullable: true}
+                ingredients_ar: {type: string, nullable: true}
+                usage_instructions_ar: {type: string, nullable: true}
+                seo_title_ar: {type: string, maxLength: 255, nullable: true}
+                seo_description_ar: {type: string, nullable: true}
+                description: {type: string}
+                ingredients: {type: string}
+                usage_instructions: {type: string}
+                seo_title: {type: string}
+                seo_description: {type: string}
+                metadata: {type: object, nullable: true}
+                ingredient_ids: {type: array, maxItems: 100, uniqueItems: true, items: {type: integer}}
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: {type: integer}
+                      sku: {type: string, maxLength: 100, description: 'Required for new variants without id'}
+                      title: {type: string, maxLength: 255, nullable: true}
+                      barcode: {type: string, maxLength: 100, nullable: true}
+                      option_values: {type: array, nullable: true, items: {type: string}}
+                      weight_grams: {type: integer, minimum: 0, nullable: true}
+                      cost_price: {type: number, minimum: 0, nullable: true}
+                      cost_currency_code: {type: string, minLength: 3, maxLength: 3, nullable: true}
+                      is_active: {type: boolean}
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required: [market_id, currency_id, price]
+                          properties:
+                            market_id: {type: integer}
+                            currency_id: {type: integer}
+                            price: {type: number, minimum: 0}
+                            compare_at_price: {type: number, minimum: 0, nullable: true}
+                            starts_at: {type: string, format: date-time, nullable: true}
+                            ends_at: {type: string, format: date-time, nullable: true}
+                            is_active: {type: boolean}
+                      stocks:
+                        type: array
+                        items:
+                          type: object
+                          required: [warehouse_id, quantity]
+                          properties:
+                            warehouse_id: {type: integer}
+                            quantity: {type: integer, minimum: 0}
+                            reorder_level: {type: integer, minimum: 0, nullable: true}
+                images: {type: array, minItems: 1, maxItems: 10, items: {type: string, format: binary, description: 'JPEG, PNG or WebP; maximum 8192 KiB each'}}
+                image_alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+      responses:
+        '201':
+          description: 'Create product with nested variants, prices, stock and optional images'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/products/{product}:
+    parameters:
+      - in: path
+        name: product
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_products_by_product
+      tags: [CRM]
+      summary: 'CRM product details with nested catalog relations'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'CRM product details with nested catalog relations'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_products_by_product
+      tags: [CRM]
+      summary: 'Update product including multipart images'
+      security: [{sanctumBearer: []}]
+      description: 'Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields.'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                brand_id: {type: integer}
+                category_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                name_ar: {type: string, nullable: true, maxLength: 255}
+                slug: {type: string, maxLength: 255}
+                status: {type: string, enum: [draft, active, archived]}
+                track_inventory: {type: boolean}
+                short_description: {type: string, nullable: true}
+                short_description_ar: {type: string, nullable: true}
+                description_ar: {type: string, nullable: true}
+                ingredients_ar: {type: string, nullable: true}
+                usage_instructions_ar: {type: string, nullable: true}
+                seo_title_ar: {type: string, maxLength: 255, nullable: true}
+                seo_description_ar: {type: string, nullable: true}
+                description: {type: string}
+                ingredients: {type: string}
+                usage_instructions: {type: string}
+                seo_title: {type: string}
+                seo_description: {type: string}
+                metadata: {type: object, nullable: true}
+                ingredient_ids: {type: array, maxItems: 100, uniqueItems: true, items: {type: integer}}
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: {type: integer}
+                      sku: {type: string, maxLength: 100, description: 'Required for new variants without id'}
+                      title: {type: string, maxLength: 255, nullable: true}
+                      barcode: {type: string, maxLength: 100, nullable: true}
+                      option_values: {type: array, nullable: true, items: {type: string}}
+                      weight_grams: {type: integer, minimum: 0, nullable: true}
+                      cost_price: {type: number, minimum: 0, nullable: true}
+                      cost_currency_code: {type: string, minLength: 3, maxLength: 3, nullable: true}
+                      is_active: {type: boolean}
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required: [market_id, currency_id, price]
+                          properties:
+                            market_id: {type: integer}
+                            currency_id: {type: integer}
+                            price: {type: number, minimum: 0}
+                            compare_at_price: {type: number, minimum: 0, nullable: true}
+                            starts_at: {type: string, format: date-time, nullable: true}
+                            ends_at: {type: string, format: date-time, nullable: true}
+                            is_active: {type: boolean}
+                      stocks:
+                        type: array
+                        items:
+                          type: object
+                          required: [warehouse_id, quantity]
+                          properties:
+                            warehouse_id: {type: integer}
+                            quantity: {type: integer, minimum: 0}
+                            reorder_level: {type: integer, minimum: 0, nullable: true}
+                images: {type: array, minItems: 1, maxItems: 10, items: {type: string, format: binary, description: 'JPEG, PNG or WebP; maximum 8192 KiB each'}}
+                image_alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+      responses:
+        '200':
+          description: 'Update product including multipart images'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    put:
+      operationId: put_products_by_product
+      tags: [CRM]
+      summary: 'Update product fields and nested variants'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brand_id: {type: integer}
+                category_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                name_ar: {type: string, nullable: true, maxLength: 255}
+                slug: {type: string, maxLength: 255}
+                status: {type: string, enum: [draft, active, archived]}
+                track_inventory: {type: boolean}
+                short_description: {type: string, nullable: true}
+                short_description_ar: {type: string, nullable: true}
+                description_ar: {type: string, nullable: true}
+                ingredients_ar: {type: string, nullable: true}
+                usage_instructions_ar: {type: string, nullable: true}
+                seo_title_ar: {type: string, maxLength: 255, nullable: true}
+                seo_description_ar: {type: string, nullable: true}
+                description: {type: string}
+                ingredients: {type: string}
+                usage_instructions: {type: string}
+                seo_title: {type: string}
+                seo_description: {type: string}
+                metadata: {type: object, nullable: true}
+                ingredient_ids: {type: array, maxItems: 100, uniqueItems: true, items: {type: integer}}
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: {type: integer}
+                      sku: {type: string, maxLength: 100, description: 'Required for new variants without id'}
+                      title: {type: string, maxLength: 255, nullable: true}
+                      barcode: {type: string, maxLength: 100, nullable: true}
+                      option_values: {type: array, nullable: true, items: {type: string}}
+                      weight_grams: {type: integer, minimum: 0, nullable: true}
+                      cost_price: {type: number, minimum: 0, nullable: true}
+                      cost_currency_code: {type: string, minLength: 3, maxLength: 3, nullable: true}
+                      is_active: {type: boolean}
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required: [market_id, currency_id, price]
+                          properties:
+                            market_id: {type: integer}
+                            currency_id: {type: integer}
+                            price: {type: number, minimum: 0}
+                            compare_at_price: {type: number, minimum: 0, nullable: true}
+                            starts_at: {type: string, format: date-time, nullable: true}
+                            ends_at: {type: string, format: date-time, nullable: true}
+                            is_active: {type: boolean}
+                      stocks:
+                        type: array
+                        items:
+                          type: object
+                          required: [warehouse_id, quantity]
+                          properties:
+                            warehouse_id: {type: integer}
+                            quantity: {type: integer, minimum: 0}
+                            reorder_level: {type: integer, minimum: 0, nullable: true}
+                images: {type: array, minItems: 1, maxItems: 10, items: {type: string, format: binary, description: 'JPEG, PNG or WebP; maximum 8192 KiB each'}}
+                image_alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+      responses:
+        '200':
+          description: 'Update product fields and nested variants'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    patch:
+      operationId: patch_products_by_product
+      tags: [CRM]
+      summary: 'Update product fields and nested variants'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brand_id: {type: integer}
+                category_id: {type: integer}
+                name: {type: string, maxLength: 255}
+                name_ar: {type: string, nullable: true, maxLength: 255}
+                slug: {type: string, maxLength: 255}
+                status: {type: string, enum: [draft, active, archived]}
+                track_inventory: {type: boolean}
+                short_description: {type: string, nullable: true}
+                short_description_ar: {type: string, nullable: true}
+                description_ar: {type: string, nullable: true}
+                ingredients_ar: {type: string, nullable: true}
+                usage_instructions_ar: {type: string, nullable: true}
+                seo_title_ar: {type: string, maxLength: 255, nullable: true}
+                seo_description_ar: {type: string, nullable: true}
+                description: {type: string}
+                ingredients: {type: string}
+                usage_instructions: {type: string}
+                seo_title: {type: string}
+                seo_description: {type: string}
+                metadata: {type: object, nullable: true}
+                ingredient_ids: {type: array, maxItems: 100, uniqueItems: true, items: {type: integer}}
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: {type: integer}
+                      sku: {type: string, maxLength: 100, description: 'Required for new variants without id'}
+                      title: {type: string, maxLength: 255, nullable: true}
+                      barcode: {type: string, maxLength: 100, nullable: true}
+                      option_values: {type: array, nullable: true, items: {type: string}}
+                      weight_grams: {type: integer, minimum: 0, nullable: true}
+                      cost_price: {type: number, minimum: 0, nullable: true}
+                      cost_currency_code: {type: string, minLength: 3, maxLength: 3, nullable: true}
+                      is_active: {type: boolean}
+                      prices:
+                        type: array
+                        items:
+                          type: object
+                          required: [market_id, currency_id, price]
+                          properties:
+                            market_id: {type: integer}
+                            currency_id: {type: integer}
+                            price: {type: number, minimum: 0}
+                            compare_at_price: {type: number, minimum: 0, nullable: true}
+                            starts_at: {type: string, format: date-time, nullable: true}
+                            ends_at: {type: string, format: date-time, nullable: true}
+                            is_active: {type: boolean}
+                      stocks:
+                        type: array
+                        items:
+                          type: object
+                          required: [warehouse_id, quantity]
+                          properties:
+                            warehouse_id: {type: integer}
+                            quantity: {type: integer, minimum: 0}
+                            reorder_level: {type: integer, minimum: 0, nullable: true}
+                images: {type: array, minItems: 1, maxItems: 10, items: {type: string, format: binary, description: 'JPEG, PNG or WebP; maximum 8192 KiB each'}}
+                image_alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+      responses:
+        '200':
+          description: 'Update product fields and nested variants'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    delete:
+      operationId: delete_products_by_product
+      tags: [CRM]
+      summary: 'Soft archive product'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'Deletion or archive acknowledged'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/categories:
+    get:
+      operationId: get_categories
+      tags: [CRM]
+      summary: 'Category tree or paginated category list'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: tree
+          schema: {type: boolean}
+        - in: query
+          name: paginate
+          schema: {type: boolean}
+        - in: query
+          name: page
+          schema: {type: integer}
+        - in: query
+          name: search
+          schema: {type: string}
+        - in: query
+          name: is_active
+          schema: {type: boolean}
+      responses:
+        '200':
+          description: 'Category tree or paginated category list'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_categories
+      tags: [CRM]
+      summary: 'Create category; nesting limited to three levels'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                parent_id: {type: integer}
+                name: {type: string}
+                name_ar: {type: string}
+                slug: {type: string}
+                description: {type: string}
+                description_ar: {type: string}
+                image_url: {type: string}
+                image: {type: string, format: binary}
+                sort_order: {type: integer}
+                is_active: {type: boolean}
+      responses:
+        '201':
+          description: 'Create category; nesting limited to three levels'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/categories/{category}:
+    parameters:
+      - in: path
+        name: category
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_categories_by_category
+      tags: [CRM]
+      summary: 'Category detail with localized parent and descendants'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'Category detail with localized parent and descendants'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    patch:
+      operationId: patch_categories_by_category
+      tags: [CRM]
+      summary: 'Update category and validate ancestry/depth'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_id: {type: integer}
+                name: {type: string}
+                name_ar: {type: string}
+                slug: {type: string}
+                description: {type: string}
+                description_ar: {type: string}
+                image_url: {type: string}
+                image: {type: string, format: binary}
+                sort_order: {type: integer}
+                is_active: {type: boolean}
+      responses:
+        '200':
+          description: 'Update category and validate ancestry/depth'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    delete:
+      operationId: delete_categories_by_category
+      tags: [CRM]
+      summary: 'Delete category'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'Deletion or archive acknowledged'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/brands:
+    get:
+      operationId: get_brands
+      tags: [CRM]
+      summary: 'Paginated localized brands'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string}
+        - in: query
+          name: is_active
+          schema: {type: boolean}
+        - in: query
+          name: page
+          schema: {type: integer}
+      responses:
+        '200':
+          description: 'Paginated localized brands'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_brands
+      tags: [CRM]
+      summary: 'Create brand with optional image'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: {type: string}
+                name_ar: {type: string}
+                slug: {type: string}
+                origin_country: {type: string}
+                description: {type: string}
+                description_ar: {type: string}
+                logo_url: {type: string}
+                image: {type: string, format: binary}
+                is_active: {type: boolean}
+      responses:
+        '201':
+          description: 'Create brand with optional image'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/brands/{brand}:
+    parameters:
+      - in: path
+        name: brand
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_brands_by_brand
+      tags: [CRM]
+      summary: 'Localized brand detail'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'Localized brand detail'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    patch:
+      operationId: patch_brands_by_brand
+      tags: [CRM]
+      summary: 'Update brand metadata'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                name_ar: {type: string}
+                slug: {type: string}
+                origin_country: {type: string}
+                description: {type: string}
+                description_ar: {type: string}
+                logo_url: {type: string}
+                image: {type: string, format: binary}
+                is_active: {type: boolean}
+      responses:
+        '200':
+          description: 'Update brand metadata'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    delete:
+      operationId: delete_brands_by_brand
+      tags: [CRM]
+      summary: 'Delete brand'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'Deletion or archive acknowledged'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/product-reviews:
+    get:
+      operationId: get_product_reviews
+      tags: [Product Reviews]
+      summary: CRM reviews list, optionally filtered by status or product
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [pending, approved, rejected]}
+        - in: query
+          name: product_id
+          schema: {type: integer}
+      responses:
+        '200': {description: 'Paginated review models'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      operationId: post_product_reviews
+      tags: [Product Reviews]
+      summary: Create pending review from delivered order item
+      description: Reviewer identity and verified purchase are derived server-side; client cannot set them.
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_item_id, rating]
+              properties:
+                order_item_id: {type: integer}
+                rating: {type: integer, minimum: 1, maximum: 5}
+                title: {type: string, nullable: true, maxLength: 150}
+                body: {type: string, nullable: true, maxLength: 3000}
+      responses:
+        '201': {description: 'REVIEW_PENDING'}
+        '422': {description: 'Validation failed, duplicate review or order not delivered'}
+
+  /api/v1/product-reviews/{review}/moderate:
+    parameters:
+      - in: path
+        name: review
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_product_reviews_by_review_moderate
+      tags: [Product Reviews]
+      summary: Approve or reject review
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [approved, rejected]}
+      responses:
+        '200': {description: 'REVIEW_MODERATED'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/newsletter/subscribers:
+    get:
+      operationId: get_newsletter_subscribers
+      tags: [CRM]
+      summary: 'CRM paginated subscriber search and status filter'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'NEWSLETTER_SUBSCRIBERS'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/newsletter/subscribers/{subscriber}:
+    parameters:
+      - in: path
+        name: subscriber
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_newsletter_subscribers_by_subscriber
+      tags: [CRM]
+      summary: 'Change subscription status and rotate unsubscribe token'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'NEWSLETTER_SUBSCRIBER_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/rituals:
+    get:
+      operationId: get_rituals
+      tags: [Rituals]
+      summary: CRM paginated ritual list
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'RITUAL_ADMIN_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_rituals
+      tags: [Rituals]
+      summary: Create ritual and optional steps/product links transactionally
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RitualInput'}
+      responses:
+        '201': {description: 'RITUAL_CREATED'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/rituals/{ritual}:
+    parameters:
+      - in: path
+        name: ritual
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_rituals_by_ritual
+      tags: [Rituals]
+      summary: CRM ritual with steps and products
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'RITUAL_ADMIN_DETAIL'}
+        '404': {description: 'Ritual not found'}
+    patch:
+      operationId: patch_rituals_by_ritual
+      tags: [Rituals]
+      summary: Update ritual and replace supplied steps or product links
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RitualInput'}
+      responses:
+        '200': {description: 'RITUAL_UPDATED'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_rituals_by_ritual
+      tags: [Rituals]
+      summary: Delete ritual
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'RITUAL_DELETED'}
+        '404': {description: 'Ritual not found'}
+
+  /api/v1/ritual-quiz/questions:
+    get:
+      operationId: get_ritual_quiz_questions
+      tags: [CRM]
+      summary: 'CRM quiz questions with options and products'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Quiz list'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_ritual_quiz_questions
+      tags: [CRM]
+      summary: 'Create quiz question'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question: {description: 'Validated by controller'}
+                question_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
+      responses:
+        '201': {description: 'QUIZ_QUESTION_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/ritual-quiz/questions/{question}:
+    parameters:
+      - in: path
+        name: question
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_ritual_quiz_questions_by_question
+      tags: [CRM]
+      summary: 'Update quiz question'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question: {description: 'Validated by controller'}
+                question_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'Quiz question updated'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/ritual-quiz/questions/{question}/options:
+    parameters:
+      - in: path
+        name: question
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_ritual_quiz_questions_by_question_options
+      tags: [CRM]
+      summary: 'Create quiz option'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: {description: 'Validated by controller'}
+                label_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
+      responses:
+        '201': {description: 'QUIZ_OPTION_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/ritual-quiz/options/{option}:
+    parameters:
+      - in: path
+        name: option
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_ritual_quiz_options_by_option
+      tags: [CRM]
+      summary: 'Update quiz option'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: {description: 'Validated by controller'}
+                label_ar: {description: 'Validated by controller'}
+                sort_order: {description: 'Validated by controller'}
+                is_active: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'Quiz option updated'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/ritual-quiz/options/{option}/products:
+    parameters:
+      - in: path
+        name: option
+        required: true
+        schema: {type: string}
+    put:
+      operationId: put_ritual_quiz_options_by_option_products
+      tags: [CRM]
+      summary: 'Replace option product weights'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                products: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'Option products synchronized'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/ingredients:
+    get:
+      operationId: get_ingredients
+      tags: [Ingredients]
+      summary: CRM ingredient list
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'INGREDIENT_LIST; paginated ingredient records'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_ingredients
+      tags: [Ingredients]
+      summary: Create ingredient
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IngredientInput'}
+      responses:
+        '201': {description: 'INGREDIENT_CREATED'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/ingredients/{ingredient}:
+    parameters:
+      - in: path
+        name: ingredient
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_ingredients_by_ingredient
+      tags: [Ingredients]
+      summary: CRM ingredient detail
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Ingredient model in response data'}
+        '404': {description: 'Ingredient not found'}
+    patch:
+      operationId: patch_ingredients_by_ingredient
+      tags: [Ingredients]
+      summary: Update ingredient fields
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IngredientInput'}
+      responses:
+        '200': {description: 'INGREDIENT_UPDATED'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '404': {description: 'Ingredient not found'}
+
+  /api/v1/categories/{category}/image:
+    parameters:
+      - in: path
+        name: category
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_categories_by_category_image
+      tags: [Media]
+      summary: 'Upload category image'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 5120 KiB'}
+      responses:
+        '200': {description: 'CATEGORY_IMAGE_UPLOADED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_categories_by_category_image
+      tags: [Media]
+      summary: 'Delete category image'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'CATEGORY_IMAGE_DELETED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/brands/{brand}/image:
+    parameters:
+      - in: path
+        name: brand
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_brands_by_brand_image
+      tags: [Media]
+      summary: 'Upload brand logo'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 5120 KiB'}
+      responses:
+        '200': {description: 'BRAND_LOGO_UPLOADED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_brands_by_brand_image
+      tags: [Media]
+      summary: 'Delete brand logo'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'BRAND_LOGO_DELETED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/products/{product}/images:
+    parameters:
+      - in: path
+        name: product
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_products_by_product_images
+      tags: [Media]
+      summary: 'Upload one to ten product images'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [images]
+              properties:
+                images:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: {type: string, format: binary, description: 'JPEG PNG or WebP; maximum 8192 KiB per file'}
+                alt_texts: {type: array, items: {type: string, maxLength: 255, nullable: true}}
+                is_primary: {type: boolean}
+      responses:
+        '201': {description: 'PRODUCT_IMAGES_UPLOADED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/products/{product}/images/{media}:
+    parameters:
+      - in: path
+        name: product
+        required: true
+        schema: {type: string}
+      - in: path
+        name: media
+        required: true
+        schema: {type: string}
+    delete:
+      operationId: delete_products_by_product_images_by_media
+      tags: [Media]
+      summary: 'Delete image belonging to specified product'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'PRODUCT_IMAGE_DELETED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: 'Image does not belong to product or resource missing'}
+
+  /api/v1/currencies:
+    get:
+      operationId: get_currencies
+      tags: [CRM]
+      summary: 'List currencies with associated catalog metadata'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'List currencies with associated catalog metadata'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/markets:
+    get:
+      operationId: get_markets
+      tags: [CRM]
+      summary: 'List markets with associated catalog metadata'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'List markets with associated catalog metadata'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/warehouses:
+    get:
+      operationId: get_warehouses
+      tags: [CRM]
+      summary: 'List warehouses with associated catalog metadata'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200':
+          description: 'List warehouses with associated catalog metadata'
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/prices/upsert:
+    post:
+      operationId: post_prices_upsert
+      tags: [CRM]
+      summary: 'Create or update variant market price'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variant_id, market_id, currency_id, price]
+              properties:
+                variant_id: {type: integer}
+                market_id: {type: integer}
+                currency_id: {type: integer}
+                price: {type: number}
+                compare_at_price: {type: number}
+                starts_at: {type: string}
+                ends_at: {type: string}
+                is_active: {type: boolean}
+      responses:
+        '200':
+          description: 'Create or update variant market price'
+        '201':
+          description: 'Create or update variant market price'
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/inventory:
+    get:
+      operationId: get_inventory
+      tags: [CRM]
+      summary: 'Inventory stocks with product and warehouse relations'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: warehouse_id
+          schema: {type: string}
+        - in: query
+          name: low_stock
+          schema: {type: string}
+      responses:
+        '200': {description: 'INVENTORY_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/inventory/movements:
+    get:
+      operationId: get_inventory_movements
+      tags: [CRM]
+      summary: 'Paginated stock movement ledger'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: variant_id
+          schema: {type: string}
+        - in: query
+          name: warehouse_id
+          schema: {type: string}
+        - in: query
+          name: type
+          schema: {type: string}
+      responses:
+        '200': {description: 'INVENTORY_MOVEMENTS'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/inventory/adjust:
+    post:
+      operationId: post_inventory_adjust
+      tags: [CRM]
+      summary: 'Adjust on-hand stock transactionally; reject negative resulting stock'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                variant_id: {description: 'Validated server-side'}
+                warehouse_id: {description: 'Validated server-side'}
+                quantity_delta: {description: 'Validated server-side'}
+                reason: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'INVENTORY_ADJUSTED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/customers:
+    get:
+      operationId: get_customers
+      tags: [CRM]
+      summary: 'Search customers with order counts and sums'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: search
+          schema: {type: string}
+      responses:
+        '200': {description: 'CUSTOMER_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      operationId: post_customers
+      tags: [CRM]
+      summary: 'Create customer record'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                first_name: {description: 'Validated server-side'}
+                last_name: {description: 'Validated server-side'}
+                email: {description: 'Validated server-side'}
+                phone: {description: 'Validated server-side'}
+                status: {description: 'Validated server-side'}
+                tags: {description: 'Validated server-side'}
+                notes: {description: 'Validated server-side'}
+                marketing_opt_in: {description: 'Validated server-side'}
+      responses:
+        '201': {description: 'CUSTOMER_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/customers/{customer}:
+    parameters:
+      - in: path
+        name: customer
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_customers_by_customer
+      tags: [CRM]
+      summary: 'Get customer with addresses and order items'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Customer detail'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    patch:
+      operationId: patch_customers_by_customer
+      tags: [CRM]
+      summary: 'Update customer fields'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                first_name: {description: 'Validated server-side'}
+                last_name: {description: 'Validated server-side'}
+                email: {description: 'Validated server-side'}
+                phone: {description: 'Validated server-side'}
+                status: {description: 'Validated server-side'}
+                tags: {description: 'Validated server-side'}
+                notes: {description: 'Validated server-side'}
+                marketing_opt_in: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'CUSTOMER_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_customers_by_customer
+      tags: [CRM]
+      summary: 'Delete customer'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'CUSTOMER_DELETED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/coupons:
+    get:
+      operationId: get_coupons
+      tags: [CRM]
+      summary: 'Paginated coupons'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'COUPON_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      operationId: post_coupons
+      tags: [CRM]
+      summary: 'Create coupon; code normalized to uppercase'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                code: {description: 'Validated server-side'}
+                name: {description: 'Validated server-side'}
+                type: {description: 'Validated server-side'}
+                value: {description: 'Validated server-side'}
+                min_spend: {description: 'Validated server-side'}
+                max_discount: {description: 'Validated server-side'}
+                starts_at: {description: 'Validated server-side'}
+                ends_at: {description: 'Validated server-side'}
+                max_uses: {description: 'Validated server-side'}
+                max_uses_per_customer: {description: 'Validated server-side'}
+                rules: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
+      responses:
+        '201': {description: 'COUPON_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/coupons/{coupon}:
+    parameters:
+      - in: path
+        name: coupon
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_coupons_by_coupon
+      tags: [CRM]
+      summary: 'Get coupon detail'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'COUPON_DETAIL'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    patch:
+      operationId: patch_coupons_by_coupon
+      tags: [CRM]
+      summary: 'Update coupon fields'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                name: {description: 'Validated server-side'}
+                type: {description: 'Validated server-side'}
+                value: {description: 'Validated server-side'}
+                min_spend: {description: 'Validated server-side'}
+                max_discount: {description: 'Validated server-side'}
+                starts_at: {description: 'Validated server-side'}
+                ends_at: {description: 'Validated server-side'}
+                max_uses: {description: 'Validated server-side'}
+                max_uses_per_customer: {description: 'Validated server-side'}
+                rules: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'COUPON_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_coupons_by_coupon
+      tags: [CRM]
+      summary: 'Delete coupon'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'COUPON_DELETED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/checkout/quote:
+    post:
+      operationId: post_checkout_quote
+      tags: [CRM]
+      summary: 'Authenticated provisional quote with optional coupon'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [market_id, items, shipping_address]
+              properties:
+                market_id: {type: integer}
+                coupon_code: {type: string}
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [variant_id, quantity]
+                    properties:
+                      variant_id: {type: integer}
+                      quantity: {type: integer, minimum: 1, maximum: 10000}
+                shipping_address:
+                  type: object
+                  required: [country_code, city]
+                  properties:
+                    country_code: {type: string, minLength: 2, maxLength: 2}
+                    city: {type: string, maxLength: 120}
+      responses:
+        '200':
+          description: 'Provisional quote; final payable total not authorized'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      market_id: {type: integer}
+                      currency_code: {type: string}
+                      subtotal: {type: string}
+                      discount_total: {type: string}
+                      net_subtotal: {type: string}
+                      shipping: {type: object}
+                      total_before_tax: {type: string}
+                      tax_status: {type: string}
+                      tax_total: {type: string, nullable: true}
+                      is_final_payable_total: {type: boolean}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/market-tax-rules:
+    get:
+      operationId: get_market_tax_rules
+      tags: [CRM]
+      summary: 'List market tax policies'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'MARKET_TAX_RULE_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/markets/{market}/tax-rule:
+    parameters:
+      - in: path
+        name: market
+        required: true
+        schema: {type: string}
+    put:
+      operationId: put_markets_by_market_tax_rule
+      tags: [CRM]
+      summary: 'Save tax policy; changes revoke prior approval'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                rate_percent: {description: 'Validated server-side'}
+                calculation_method: {description: 'Validated server-side'}
+                tax_shipping: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'MARKET_TAX_RULE_SAVED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/markets/{market}/tax-rule/approve:
+    parameters:
+      - in: path
+        name: market
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_markets_by_market_tax_rule_approve
+      tags: [CRM]
+      summary: 'Approve configured tax policy; final payable remains disabled'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                confirm: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'MARKET_TAX_RULE_APPROVED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/shipping-rules:
+    get:
+      operationId: get_shipping_rules
+      tags: [CRM]
+      summary: 'List market shipping rules'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+      responses:
+        '200': {description: 'SHIPPING_RULE_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      operationId: post_shipping_rules
+      tags: [CRM]
+      summary: 'Create unique market/city shipping rule; city may be *'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                market_id: {description: 'Validated server-side'}
+                city: {description: 'Validated server-side'}
+                shipping_fee: {description: 'Validated server-side'}
+                free_shipping_threshold: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
+      responses:
+        '201': {description: 'SHIPPING_RULE_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/shipping-rules/{shippingRule}:
+    parameters:
+      - in: path
+        name: shippingRule
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_shipping_rules_by_shippingRule
+      tags: [CRM]
+      summary: 'Update shipping charges; market and city are immutable'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                shipping_fee: {description: 'Validated server-side'}
+                free_shipping_threshold: {description: 'Validated server-side'}
+                is_active: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'SHIPPING_RULE_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/finance/report/export.csv:
+    get:
+      operationId: get_finance_report_export_csv
+      tags: [CRM]
+      summary: 'Download finance report CSV using same filters as finance report'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: period
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
+      responses:
+        '200': {description: 'CSV download; text/csv streamed attachment'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/finance/report:
+    get:
+      operationId: get_finance_report
+      tags: [CRM]
+      summary: 'Finance report: delivered sales, expenses, COGS and provisional profit'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: period
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
+      responses:
+        '200': {description: 'FINANCE_REPORT'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/finance/expenses:
+    get:
+      operationId: get_finance_expenses
+      tags: [CRM]
+      summary: 'Paginated expenses ordered by incurred date'
+      security: [{sanctumBearer: []}]
+      parameters:
+        - in: query
+          name: market_id
+          schema: {type: string}
+        - in: query
+          name: from
+          schema: {type: string}
+        - in: query
+          name: to
+          schema: {type: string}
+        - in: query
+          name: category
+          schema: {type: string}
+      responses:
+        '200': {description: 'FINANCE_EXPENSES'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    post:
+      operationId: post_finance_expenses
+      tags: [CRM]
+      summary: 'Create expense for active market and its currency'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                market_id: {description: 'Validated server-side'}
+                category: {description: 'Validated server-side'}
+                description: {description: 'Validated server-side'}
+                amount: {description: 'Validated server-side'}
+                incurred_on: {description: 'Validated server-side'}
+                reference: {description: 'Validated server-side'}
+      responses:
+        '201': {description: 'FINANCE_EXPENSE_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/finance/expenses/{expense}:
+    parameters:
+      - in: path
+        name: expense
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_finance_expenses_by_expense
+      tags: [CRM]
+      summary: 'Update expense; market and currency cannot be reassigned'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                category: {description: 'Validated server-side'}
+                description: {description: 'Validated server-side'}
+                amount: {description: 'Validated server-side'}
+                incurred_on: {description: 'Validated server-side'}
+                reference: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'FINANCE_EXPENSE_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      operationId: delete_finance_expenses_by_expense
+      tags: [CRM]
+      summary: 'Archive expense'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'FINANCE_EXPENSE_ARCHIVED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/finance/order-items/{item}/cost:
+    parameters:
+      - in: path
+        name: item
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_finance_order_items_by_item_cost
+      tags: [CRM]
+      summary: 'Set historical order-item unit cost in an active currency'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Controller-validated fields; see endpoint-specific constraints in source.'
+              properties:
+                unit_cost_snapshot: {description: 'Validated server-side'}
+                unit_cost_currency_code: {description: 'Validated server-side'}
+      responses:
+        '200': {description: 'FINANCE_ITEM_COST_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/orders/{order}/refund-requests:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_orders_by_order_refund_requests
+      tags: [CRM]
+      summary: 'List refund requests for order'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'REFUND_REQUEST_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_orders_by_order_refund_requests
+      tags: [CRM]
+      summary: 'Request refund; does not initiate provider refund'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {description: 'Validated by controller'}
+      responses:
+        '201': {description: 'REFUND_REQUEST_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/refund-requests/{refund}/audit:
+    parameters:
+      - in: path
+        name: refund
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_refund_requests_by_refund_audit
+      tags: [CRM]
+      summary: 'List refund audit events'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'REFUND_AUDIT_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/refund-requests/{refund}/approve:
+    parameters:
+      - in: path
+        name: refund
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_refund_requests_by_refund_approve
+      tags: [CRM]
+      summary: 'Approve refund; requester cannot approve own request; provider refund not initiated'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirm: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'REFUND_APPROVED_AWAITING_PROVIDER'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/orders:
+    get:
+      operationId: get_orders
+      tags: [CRM]
+      summary: 'Paginated CRM orders with filters'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'ORDER_LIST'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: post_orders
+      tags: [CRM]
+      summary: 'Create order and reserve inventory'
+      security: [{sanctumBearer: []}]
+      responses:
+        '201': {description: 'ORDER_CREATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+  /api/v1/orders/{order}:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_orders_by_order
+      tags: [CRM]
+      summary: 'Order detail with related customer items payments and shipments'
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'Order detail'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted/provider-enquiry:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_orders_by_order_payments_myfatoorah_sandbox_hosted_provider_enquiry
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only read-only provider enquiry; validates payment_id against stored invoice, order, currency and amount; never settles'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_id: {type: string, pattern: '^[0-9]{1,64}$'}
+      responses:
+        '200': {description: 'SANDBOX_PROVIDER_ENQUIRY_MATCHED'}
+        '404': {description: 'Endpoint disabled or order not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted/status:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    get:
+      operationId: get_orders_by_order_payments_myfatoorah_sandbox_hosted_status
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only read-only hosted reservation status; does not query provider or authorize retry'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      security: [{sanctumBearer: []}]
+      responses:
+        '200': {description: 'SANDBOX_HOSTED_RESERVATION_STATUS'}
+        '404': {description: 'Endpoint disabled or order not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/orders/{order}/payments/myfatoorah/sandbox-hosted:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    post:
+      operationId: post_orders_by_order_payments_myfatoorah_sandbox_hosted
+      tags: [Sandbox Payments]
+      summary: 'Local/testing-only sandbox hosted payment initiation; idempotent reservation; redirect does not prove payment'
+      description: Disabled by default; local/testing environment and explicit feature flags required. Never use as a production payment endpoint.
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key: {type: string, minLength: 16, maxLength: 128}
+                payment_method: {type: string, enum: [CARD, APPLE_PAY, GOOGLE_PAY, KNET]}
+      responses:
+        '201': {description: 'SANDBOX_HOSTED_PAYMENT_CREATED'}
+        '202': {description: 'SANDBOX_HOSTED_PAYMENT_UNRESOLVED'}
+        '404': {description: 'Endpoint disabled or order not found'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /api/v1/orders/{order}/status:
+    parameters:
+      - in: path
+        name: order
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: patch_orders_by_order_status
+      tags: [CRM]
+      summary: 'Transition order status'
+      security: [{sanctumBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: {description: 'Validated by controller'}
+      responses:
+        '200': {description: 'ORDER_STATUS_UPDATED'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
+components:
+  securitySchemes:
+    sanctumBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: Laravel Sanctum token
+  schemas:
+    ApiSuccess:
+      type: object
+      properties:
+        success: {type: boolean, example: true}
+        code: {type: string}
+        message: {type: string}
+        data: {type: string, nullable: true}
+        meta: {type: object}
+        errors: {type: object}
+    PublicHomepageSection:
+      type: object
+      properties:
+        key: {type: string}
+        type: {type: string}
+        title: {type: string}
+        subtitle: {type: string, nullable: true}
+        image_url: {type: string, nullable: true}
+        link_url: {type: string, nullable: true}
+        content: {type: object, nullable: true}
+        sort_order: {type: integer}
+    HomepageSectionInput:
+      type: object
+      description: POST requires key, type and title_en; PATCH accepts a subset.
+      properties:
+        key: {type: string, maxLength: 100, pattern: '^[a-z0-9][a-z0-9_-]*$'}
+        type: {type: string, enum: [hero, banner, featured, promotion, editorial, custom]}
+        title_en: {type: string, maxLength: 255}
+        title_ar: {type: string, nullable: true, maxLength: 255}
+        subtitle_en: {type: string, nullable: true, maxLength: 5000}
+        subtitle_ar: {type: string, nullable: true, maxLength: 5000}
+        image_url: {type: string, format: uri, nullable: true}
+        link_url: {type: string, nullable: true}
+        content: {type: object, nullable: true}
+        sort_order: {type: integer, minimum: 0, maximum: 1000000}
+        is_published: {type: boolean}
+    IngredientInput:
+      type: object
+      description: POST requires slug and name; PATCH accepts partial fields.
+      properties:
+        slug: {type: string, maxLength: 255}
+        name: {type: string, maxLength: 255}
+        name_ar: {type: string, nullable: true, maxLength: 255}
+        description: {type: string, nullable: true}
+        description_ar: {type: string, nullable: true}
+        is_active: {type: boolean}
+    RitualInput:
+      type: object
+      description: POST requires slug and title. Supplying steps or products replaces their existing relations on PATCH.
+      properties:
+        slug: {type: string, maxLength: 255}
+        title: {type: string, maxLength: 255}
+        title_ar: {type: string, nullable: true, maxLength: 255}
+        description: {type: string, nullable: true}
+        description_ar: {type: string, nullable: true}
+        image_url: {type: string, nullable: true, maxLength: 2048}
+        is_published: {type: boolean}
+        sort_order: {type: integer, minimum: 0}
+        steps:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            required: [title, instructions]
+            properties:
+              title: {type: string, maxLength: 255}
+              title_ar: {type: string, nullable: true, maxLength: 255}
+              instructions: {type: string}
+              instructions_ar: {type: string, nullable: true}
+              sort_order: {type: integer, minimum: 0}
+        products:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [product_id]
+            properties:
+              product_id: {type: integer}
+              sort_order: {type: integer, minimum: 0}
+    PartnerApplicationInput:
+      type: object
+      required: [contact_name, email, company_name, partner_type]
+      properties:
+        contact_name: {type: string, maxLength: 150}
+        email: {type: string, format: email, maxLength: 255}
+        phone: {type: string, nullable: true, maxLength: 50}
+        company_name: {type: string, maxLength: 200}
+        website: {type: string, format: uri, nullable: true, maxLength: 500}
+        partner_type: {type: string, enum: [retailer, distributor, influencer, corporate, other]}
+        message: {type: string, nullable: true, maxLength: 5000}
+  responses:
+    ValidationError:
+      description: Invalid request parameters (Laravel validation error)
+    Unauthenticated:
+      description: Bearer token missing or invalid
+    Forbidden:
+      description: Authenticated user lacks the required permission

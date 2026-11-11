@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder {
   $uae=Market::updateOrCreate(['code'=>'AE'],['name'=>'United Arab Emirates','country_code'=>'AE','currency_id'=>$aed->id,'timezone'=>'Asia/Dubai','is_default'=>false,'is_active'=>true]);
   $ksa=Market::updateOrCreate(['code'=>'SA'],['name'=>'Saudi Arabia','country_code'=>'SA','currency_id'=>$sar->id,'timezone'=>'Asia/Riyadh','is_default'=>false,'is_active'=>true]);
   Warehouse::updateOrCreate(['code'=>'EG-01'],['market_id'=>$egypt->id,'name'=>'Egypt Main Warehouse','is_active'=>true]);Warehouse::updateOrCreate(['code'=>'AE-01'],['market_id'=>$uae->id,'name'=>'UAE Main Warehouse','is_active'=>true]);Warehouse::updateOrCreate(['code'=>'SA-01'],['market_id'=>$ksa->id,'name'=>'KSA Main Warehouse','is_active'=>true]);
-  $permissions=['dashboard.view','products.view','products.manage','pricing.manage','inventory.view','inventory.manage','customers.view','customers.manage','orders.view','orders.manage','coupons.manage','settings.manage'];foreach($permissions as $name)Permission::firstOrCreate(['name'=>$name,'guard_name'=>'web']);
+  $permissions=['dashboard.view','products.view','products.manage','pricing.manage','inventory.view','inventory.manage','customers.view','customers.manage','orders.view','orders.manage','coupons.manage','settings.manage','tax.approve'];foreach($permissions as $name)Permission::firstOrCreate(['name'=>$name,'guard_name'=>'web']);
   $admin=Role::firstOrCreate(['name'=>'Super Admin','guard_name'=>'web']);$admin->syncPermissions(Permission::all());
   $user=User::updateOrCreate(['email'=>env('ADMIN_EMAIL','admin@example.com')],['name'=>env('ADMIN_NAME','KHAM Admin'),'password'=>Hash::make(env('ADMIN_PASSWORD','ChangeMe123!'))]);$user->syncRoles([$admin]);
  }
