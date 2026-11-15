@@ -45,6 +45,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/storefront/rituals/{slug}', [\App\Http\Controllers\Api\V1\RitualContentController::class, 'publicShow'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/brands', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'index'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/brands/{slug}', [\App\Http\Controllers\Api\V1\PublicBrandController::class, 'show'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/categories', [\App\Http\Controllers\Api\V1\PublicCategoryController::class, 'index'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/categories/{slug}', [\App\Http\Controllers\Api\V1\PublicCategoryController::class, 'show'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/products', [PublicStorefrontCatalogController::class, 'index'])
         ->middleware('throttle:storefront-quote');
     Route::get('/storefront/products/{product}', [PublicStorefrontCatalogController::class, 'show'])

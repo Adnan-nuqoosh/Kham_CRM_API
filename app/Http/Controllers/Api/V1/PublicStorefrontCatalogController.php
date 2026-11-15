@@ -31,7 +31,8 @@ class PublicStorefrontCatalogController extends Controller
             $query->where(fn ($q) => $q->where('name', 'like', '%'.$term.'%')
                 ->orWhere('name_ar', 'like', '%'.$term.'%'));
         }
-        $page = $query->orderBy('id')->paginate(PaginationMeta::perPage($request, 20));
+        $page = $query->with(['media', 'brand', 'category'])->orderBy('id')
+            ->paginate(PaginationMeta::perPage($request, 20));
         $locale = StorefrontLocale::resolve($request);
         return ApiResponse::success(
             collect($page->items())->map(fn (Product $p) => $this->display($p, $locale, $market))->all(),
@@ -45,6 +46,7 @@ class PublicStorefrontCatalogController extends Controller
         $market = $this->market((int) $data['market_id']);
         abort_unless($product->status === ProductStatus::Active
             && $product->variants()->where(fn ($q) => $this->sellableVariant($q, $market))->exists(), 404);
+        $product->loadMissing(['media', 'brand', 'category']);
         return ApiResponse::success($this->display($product, StorefrontLocale::resolve($request), $market),
             'Public storefront product fetched.', 'STOREFRONT_PRODUCT')
             ->header('Cache-Control', 'no-store');
@@ -80,14 +82,26 @@ class PublicStorefrontCatalogController extends Controller
         $stockByVariant = InventoryStock::query()->where('warehouse_id', $warehouse->id)
             ->whereIn('variant_id', $variants->pluck('id'))->get()->keyBy('variant_id');
         $linkedIngredients = $product->linkedIngredients()->where('is_active', true)->get();
+        $media = $product->relationLoaded('media')
+            ? $product->media
+            : $product->media()->orderBy('sort_order')->get();
+        $images = $media->values()->map(fn ($m) => [
+            'id' => $m->id,
+            'url' => $m->url,
+            'alt_text' => $m->alt_text,
+            'sort_order' => $m->sort_order,
+        ])->all();
+
         return [
             'id' => $product->id,
             'slug' => $product->slug,
             'badges' => app(\App\Services\StorefrontProductBadgeService::class)->badges($product, (int) $market->id),
             'locale' => $locale,
             'name' => StorefrontLocale::text($product->name, $product->name_ar, $locale),
+            'name_ar' => $product->name_ar,
             'short_description' => StorefrontLocale::text($product->short_description, $product->short_description_ar, $locale),
             'description' => StorefrontLocale::text($product->description, $product->description_ar, $locale),
+            'description_ar' => $product->description_ar,
             'ingredients' => StorefrontLocale::text($product->ingredients, $product->ingredients_ar, $locale),
             'linked_ingredients' => $linkedIngredients->map(fn ($ingredient) => [
                 'id' => $ingredient->id,
@@ -97,10 +111,23 @@ class PublicStorefrontCatalogController extends Controller
             ])->all(),
             'usage_instructions' => StorefrontLocale::text($product->usage_instructions, $product->usage_instructions_ar, $locale),
             'currency_code' => $market->currency->code,
+            'brand_id' => $product->brand_id,
+            'brand_slug' => $product->brand?->slug,
+            'brand_name' => $product->brand
+                ? StorefrontLocale::text($product->brand->name, $product->brand->name_ar, $locale)
+                : null,
+            'category_id' => $product->category_id,
+            'category_slug' => $product->category?->slug,
+            'category_name' => $product->category
+                ? StorefrontLocale::text($product->category->name, $product->category->name_ar, $locale)
+                : null,
+            'image_url' => $images[0]['url'] ?? null,
+            'media' => $images,
             'variants' => $variants->map(fn ($v) => [
                 'id' => $v->id,
                 'title' => $v->title,
                 'price' => $v->prices->first()?->price,
+                'compare_at_price' => $v->prices->first()?->compare_at_price,
                 'in_stock' => ($stockByVariant->get($v->id)?->available ?? 0) > 0,
             ])->all(),
         ];

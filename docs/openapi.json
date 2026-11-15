@@ -927,6 +927,114 @@
         }
       }
     },
+    "/api/v1/storefront/categories": {
+      "get": {
+        "operationId": "get_storefront_categories",
+        "tags": [
+          "Storefront Categories"
+        ],
+        "summary": "Paginated active categories with localized display fields",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "tree",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When true, returns the active category tree (roots with nested children) instead of a flat paginated list"
+          },
+          {
+            "in": "query",
+            "name": "parent_id",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            },
+            "description": "Filter flat list by parent; omit for all, null for roots only"
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string",
+              "enum": ["en", "ar"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "STOREFRONT_CATEGORIES; localized category list or tree"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/categories/{slug}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "slug",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "get_storefront_categories_by_slug",
+        "tags": [
+          "Storefront Categories"
+        ],
+        "summary": "Active category detail and up to 100 active market-eligible products",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "market_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "type": "string",
+              "enum": ["en", "ar"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "STOREFRONT_CATEGORY; data contains category and products arrays"
+          },
+          "404": {
+            "description": "Active category not found"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
     "/api/v1/storefront/products": {
       "get": {
         "operationId": "get_storefront_products",

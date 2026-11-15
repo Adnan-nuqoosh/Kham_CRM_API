@@ -16,5 +16,7 @@ class DatabaseSeeder extends Seeder {
   $permissions=['dashboard.view','products.view','products.manage','pricing.manage','inventory.view','inventory.manage','customers.view','customers.manage','orders.view','orders.manage','coupons.manage','settings.manage','tax.approve'];foreach($permissions as $name)Permission::firstOrCreate(['name'=>$name,'guard_name'=>'web']);
   $admin=Role::firstOrCreate(['name'=>'Super Admin','guard_name'=>'web']);$admin->syncPermissions(Permission::all());
   $user=User::updateOrCreate(['email'=>env('ADMIN_EMAIL','admin@example.com')],['name'=>env('ADMIN_NAME','KHAM Admin'),'password'=>Hash::make(env('ADMIN_PASSWORD','ChangeMe123!'))]);$user->syncRoles([$admin]);
+  $this->call(StorefrontCatalogSeeder::class);
+  $this->call(RitualQuizSeeder::class);
  }
 }
