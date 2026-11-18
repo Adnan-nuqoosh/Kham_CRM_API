@@ -16,6 +16,7 @@ final class StorefrontAccountController extends Controller
 {
     public function register(Request $request)
     {
+        $request->merge(['email'=>mb_strtolower(trim((string)$request->input('email','')))]);
         $data = $request->validate([
             'first_name' => ['required','string','max:100'],
             'last_name' => ['nullable','string','max:100'],
@@ -36,7 +37,7 @@ final class StorefrontAccountController extends Controller
             ]);
         });
         return ApiResponse::success([
-            'token'=>$account->createToken('storefront', ['storefront'])->plainTextToken,
+            'token'=>$account->createToken('storefront', ['storefront'], now()->addDays(30))->plainTextToken,
             'token_type'=>'Bearer',
             'customer'=>$account->customer,
         ], 'Storefront account created.', 'STOREFRONT_REGISTERED', 201)->header('Cache-Control','no-store');
@@ -44,6 +45,7 @@ final class StorefrontAccountController extends Controller
 
     public function login(Request $request)
     {
+        $request->merge(['email'=>mb_strtolower(trim((string)$request->input('email','')))]);
         $data=$request->validate(['email'=>['required','email'], 'password'=>['required','string']]);
         $account=StorefrontAccount::where('email',mb_strtolower(trim($data['email'])))->first();
         if (!$account || !Hash::check($data['password'],$account->password)) {
