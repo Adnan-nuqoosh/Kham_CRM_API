@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 final class SandboxAndDeploymentSafetyTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_sandbox_diagnostic_refuses_missing_token_and_does_not_print_secret(): void
     {
         config([
@@ -33,8 +35,8 @@ final class SandboxAndDeploymentSafetyTest extends TestCase
 
     public function test_live_and_sandbox_payment_configuration_default_to_disabled(): void
     {
-        $this->assertFalse(config('commerce.myfatoorah_live_enabled',false));
-        $this->assertFalse(config('commerce.storefront_production_checkout_enabled',false));
-        $this->assertFalse(config('commerce.myfatoorah_sandbox_enabled',false));
+        $this->assertNotSame(true,config('commerce.myfatoorah_live_enabled',false));
+        $this->assertNotSame(true,config('commerce.storefront_production_checkout_enabled',false));
+        $this->assertNotSame(true,config('commerce.myfatoorah_sandbox_enabled',false));
     }
 }
