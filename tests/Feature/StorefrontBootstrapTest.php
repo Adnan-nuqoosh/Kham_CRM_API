@@ -52,6 +52,41 @@ class StorefrontBootstrapTest extends TestCase
             ->assertJsonPath('data.checkout.is_final_payable_total', false);
     }
 
+    public function test_settings_follow_selected_market_without_changing_global_default(): void
+    {
+        $egypt = $this->egypt();
+        $aed = Currency::create([
+            'code' => 'AED', 'name' => 'UAE Dirham', 'symbol' => 'AED',
+            'decimal_places' => 2, 'rate_to_base' => 1,
+            'is_base' => false, 'is_active' => true,
+        ]);
+        $uae = Market::create([
+            'code' => 'AE', 'name' => 'United Arab Emirates',
+            'country_code' => 'AE', 'currency_id' => $aed->id,
+            'timezone' => 'Asia/Dubai', 'is_default' => false, 'is_active' => true,
+        ]);
+
+        $this->getJson('/api/v1/storefront/settings?market_id='.$uae->id)
+            ->assertOk()
+            ->assertJsonPath('data.default_market_id', $egypt->id)
+            ->assertJsonPath('data.market_id', $uae->id)
+            ->assertJsonPath('data.market_code', 'AE')
+            ->assertJsonPath('data.currency_code', 'AED')
+            ->assertJsonPath('data.checkout.ready', false);
+
+        $this->getJson('/api/v1/storefront/settings')
+            ->assertOk()
+            ->assertJsonPath('data.market_id', $egypt->id)
+            ->assertJsonPath('data.currency_code', 'EGP');
+    }
+
+    public function test_settings_reject_invalid_market_id(): void
+    {
+        $this->egypt();
+        $this->getJson('/api/v1/storefront/settings?market_id=invalid')
+            ->assertUnprocessable()->assertJsonValidationErrors('market_id');
+    }
+
     public function test_shipping_destinations_only_expose_active_rules(): void
     {
         $market = $this->egypt();
