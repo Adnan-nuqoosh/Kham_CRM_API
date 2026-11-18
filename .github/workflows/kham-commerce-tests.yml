@@ -22,6 +22,8 @@ jobs:
           coverage: none
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Audit locked Composer dependencies for known vulnerabilities
+        run: composer audit --locked --no-interaction
       - name: PHP syntax lint for project classes and migrations
         run: |
           find app database/migrations routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
