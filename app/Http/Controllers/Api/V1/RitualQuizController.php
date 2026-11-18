@@ -138,4 +138,18 @@ class RitualQuizController extends Controller
         )->all());
         return ApiResponse::success($option->load('products:id,name'));
     }
+    public function archiveQuestion(RitualQuizQuestion $question)
+    {
+        $question->update(['is_active'=>false]);
+        return ApiResponse::success($question->fresh(),
+            'Quiz question archived.', 'QUIZ_QUESTION_ARCHIVED');
+    }
+
+    public function archiveOption(RitualQuizOption $option)
+    {
+        $option->update(['is_active'=>false]);
+        return ApiResponse::success($option->fresh(),
+            'Quiz option archived.', 'QUIZ_OPTION_ARCHIVED');
+    }
+
 }
