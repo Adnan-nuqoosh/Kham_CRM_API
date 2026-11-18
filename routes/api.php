@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
 use App\Http\Controllers\Api\V1\PublicStorefrontBootstrapController;
+use App\Http\Controllers\Api\V1\StorefrontAccountController;
+use App\Http\Controllers\Api\V1\StorefrontCustomerOrdersController;
+use App\Http\Controllers\Api\V1\StorefrontAddressController;
 use App\Http\Controllers\Api\V1\IngredientController;
 use App\Http\Controllers\Api\V1\RitualQuizController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
@@ -32,6 +35,18 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/auth/register', [StorefrontAccountController::class, 'register'])->middleware('throttle:login');
+    Route::post('/storefront/auth/login', [StorefrontAccountController::class, 'login'])->middleware('throttle:login');
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/storefront/auth/me', [StorefrontAccountController::class, 'me']);
+        Route::post('/storefront/auth/logout', [StorefrontAccountController::class, 'logout']);
+        Route::get('/storefront/orders', [StorefrontCustomerOrdersController::class, 'index']);
+        Route::get('/storefront/orders/{orderNumber}', [StorefrontCustomerOrdersController::class, 'show']);
+        Route::get('/storefront/addresses', [StorefrontAddressController::class, 'index']);
+        Route::post('/storefront/addresses', [StorefrontAddressController::class, 'store']);
+        Route::patch('/storefront/addresses/{address}', [StorefrontAddressController::class, 'update']);
+        Route::delete('/storefront/addresses/{address}', [StorefrontAddressController::class, 'destroy']);
+    });
     Route::get('/storefront/markets', [PublicStorefrontBootstrapController::class, 'markets'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/settings', [PublicStorefrontBootstrapController::class, 'settings'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/shipping/destinations', [PublicStorefrontBootstrapController::class, 'destinations'])->middleware('throttle:storefront-quote');
