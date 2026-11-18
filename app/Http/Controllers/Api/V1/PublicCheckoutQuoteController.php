@@ -11,6 +11,7 @@ use App\Services\FulfillmentWarehouseResolver;
 use App\Services\PricingService;
 use App\Services\ShippingQuoteService;
 use App\Services\MarketTaxQuoteService;
+use App\Services\StorefrontCheckoutReadiness;
 use App\Support\ApiResponse;
 use App\Support\StorefrontLocale;
 use Illuminate\Http\JsonResponse;
@@ -103,6 +104,7 @@ class PublicCheckoutQuoteController extends Controller
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
         $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($subtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
+        $checkoutReadiness = app(StorefrontCheckoutReadiness::class)->forMarket($market);
 
         // Inclusive tax is already inside the taxable prices. Adding it twice
         // would overcharge customers. These are estimates, not a payment mandate.
@@ -131,13 +133,11 @@ class PublicCheckoutQuoteController extends Controller
             'tax_total' => $taxReadiness['tax_total'],
             'tax_calculation_method' => $method,
             'estimated_total' => $estimatedTotal,
-            'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
-            'checkout_ready' => false,
-            'checkout_blockers' => array_values(array_filter([
-                'PRODUCTION_CHECKOUT_NOT_ENABLED',
-                $taxReadiness['tax_status'] !== 'approved_not_enabled' ? 'TAX_POLICY_NOT_APPROVED' : null,
-            ])),
-        ], 'Provisional quote only; tax preview is non-binding and final payable remains disabled.', 'STOREFRONT_QUOTE')
+            'is_final_payable_total' => $checkoutReadiness['ready'],
+            'final_payable_total' => $checkoutReadiness['ready'] ? $estimatedTotal : null,
+            'checkout_ready' => $checkoutReadiness['ready'],
+            'checkout_blockers' => $checkoutReadiness['blockers'],
+        ], 'Quote estimate; checkout must independently reprice and reserve stock.', 'STOREFRONT_QUOTE')
             ->header('Cache-Control', 'no-store');
     }
 }
