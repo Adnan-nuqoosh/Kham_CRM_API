@@ -104,6 +104,16 @@ class PublicCheckoutQuoteController extends Controller
         $shippingTotal = (float) $shippingQuote['shipping_total'];
         $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($subtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
 
+        // Inclusive tax is already inside the taxable prices. Adding it twice
+        // would overcharge customers. These are estimates, not a payment mandate.
+        $taxAmount = $taxReadiness['tax_total'];
+        $method = $taxReadiness['tax_calculation_method'] ?? null;
+        $estimatedTotal = $taxAmount === null ? null
+            : number_format(
+                $subtotal + $shippingTotal + ($method === 'exclusive' ? (float) $taxAmount : 0),
+                4, '.', ''
+            );
+
         // The public response does not expose internal shipping-rule identifiers.
         unset($shippingQuote['rule_id']);
 
@@ -119,6 +129,8 @@ class PublicCheckoutQuoteController extends Controller
             'total_before_tax' => number_format($subtotal + $shippingTotal, 4, '.', ''),
             'tax_status' => $taxReadiness['tax_status'],
             'tax_total' => $taxReadiness['tax_total'],
+            'tax_calculation_method' => $method,
+            'estimated_total' => $estimatedTotal,
             'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
             'checkout_ready' => false,
             'checkout_blockers' => array_values(array_filter([
