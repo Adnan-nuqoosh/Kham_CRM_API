@@ -15,6 +15,23 @@ return [
     'configured_shipping_orders_enabled' => env('COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED', false),
     // Never enables production checkout. Local mock flow only; no real payment.
     'storefront_test_checkout_enabled' => env('COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED', false),
+    // Independent release gate: defaults off even when provider credentials exist.
+    'storefront_production_checkout_enabled' => env('COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED', false),
+    'myfatoorah_live_redirect_url' => env('MYFATOORAH_LIVE_REDIRECT_URL'),
+    'myfatoorah_live_webhook_secrets' => [
+        'EG' => env('MYFATOORAH_WEBHOOK_SECRET_EG'),
+        'AE' => env('MYFATOORAH_WEBHOOK_SECRET_AE'),
+        'SA' => env('MYFATOORAH_WEBHOOK_SECRET_SA'),
+    ],
+    // LIVE payments remain disabled until order checkout, verified webhook
+    // settlement, refund/retry handling and integration tests are complete.
+    // Configure tokens only in private server environment, never in Git.
+    'myfatoorah_live_enabled' => env('MYFATOORAH_LIVE_ENABLED', false),
+    'myfatoorah_live_tokens' => [
+        'EG' => env('MYFATOORAH_LIVE_TOKEN_EG'),
+        'AE' => env('MYFATOORAH_LIVE_TOKEN_AE'),
+        'SA' => env('MYFATOORAH_LIVE_TOKEN_SA'),
+    ],
     // Sandbox-only service; no checkout route or payment status mutation yet.
     'myfatoorah_sandbox_enabled' => env('MYFATOORAH_SANDBOX_ENABLED', false),
     'myfatoorah_sandbox_token' => env('MYFATOORAH_SANDBOX_TOKEN'),

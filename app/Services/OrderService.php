@@ -47,6 +47,7 @@ class OrderService {
    $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal);
    $mode=$payload['shipping_mode']??'manual';
    $shippingRuleId=null;
+   $taxMethod='exclusive';
    $shipping=(float)($payload['shipping_total']??0);
    $tax=(float)($payload['tax_total']??0);
    foreach (['shipping_total', 'tax_total'] as $field) {
@@ -81,8 +82,9 @@ class OrderService {
      throw ValidationException::withMessages(['tax_total'=>['Submitted tax does not match the server-calculated approved tax.']]);
     }
     $tax=(float)$taxPreview['tax_total'];
+    $taxMethod=$taxPreview['tax_calculation_method'] ?? 'exclusive';
    }
-   $order=Order::create(['order_number'=>$this->nextNumber(),'customer_id'=>$payload['customer_id']??null,'market_id'=>$payload['market_id'],'warehouse_id'=>$warehouseId,'currency_code'=>$lines[0]['price']->currency->code??$lines[0]['price']->currency_id,'status'=>OrderStatus::Pending,'payment_status'=>PaymentStatus::Pending,'fulfillment_status'=>'unfulfilled','subtotal'=>$subtotal,'discount_total'=>$discount,'shipping_total'=>$shipping,'shipping_mode'=>$mode,'shipping_rule_id'=>$shippingRuleId,'tax_total'=>$tax,'grand_total'=>max(0,$subtotal-$discount+$shipping+$tax),'coupon_code'=>$payload['coupon_code']??null,'notes'=>$payload['notes']??null,'placed_at'=>now()]);
+   $order=Order::create(['order_number'=>$this->nextNumber(),'customer_id'=>$payload['customer_id']??null,'market_id'=>$payload['market_id'],'warehouse_id'=>$warehouseId,'currency_code'=>$lines[0]['price']->currency->code??$lines[0]['price']->currency_id,'status'=>OrderStatus::Pending,'payment_status'=>PaymentStatus::Pending,'fulfillment_status'=>'unfulfilled','subtotal'=>$subtotal,'discount_total'=>$discount,'shipping_total'=>$shipping,'shipping_mode'=>$mode,'shipping_rule_id'=>$shippingRuleId,'tax_total'=>$tax,'grand_total'=>max(0,$subtotal-$discount+$shipping+($taxMethod==='exclusive' ? $tax : 0)),'coupon_code'=>$payload['coupon_code']??null,'notes'=>$payload['notes']??null,'placed_at'=>now()]);
    foreach($lines as $row){$order->items()->create(['product_id'=>$row['variant']->product_id,'variant_id'=>$row['variant']->id,'sku'=>$row['variant']->sku,'name'=>$row['variant']->product->name.($row['variant']->title?' - '.$row['variant']->title:''),'quantity'=>$row['qty'],'unit_price'=>$row['price']->price,'discount_total'=>0,'tax_total'=>0,'line_total'=>$row['line'],'unit_cost_snapshot'=>$row['variant']->cost_price !== null && $row['variant']->cost_currency_code !== null ? $row['variant']->cost_price : null,'unit_cost_currency_code'=>$row['variant']->cost_price !== null ? $row['variant']->cost_currency_code : null]);$this->inventory->reserve($row['variant']->id,$warehouseId,$row['qty'],$order->id);}
    foreach(['shipping','billing'] as $type){if(!empty($payload[$type.'_address']))$order->addresses()->create(array_merge($payload[$type.'_address'],['type'=>$type]));}
    return $order->load(['items','addresses','market.currency','warehouse','customer']);

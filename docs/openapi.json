@@ -528,26 +528,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "status"
-                ],
-                "properties": {
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "pending",
-                      "in_review",
-                      "approved",
-                      "rejected"
-                    ]
-                  },
-                  "internal_notes": {
-                    "type": "string",
-                    "nullable": true,
-                    "maxLength": 5000
-                  }
-                }
+                "$ref": "#/components/schemas/PartnerApplicationAdminUpdate"
               }
             }
           }
@@ -698,6 +679,81 @@
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Authenticated verified buyer submits pending product review",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "201": {
+            "description": "Review pending moderation"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Product slug or numeric ID"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "order_item_id",
+                  "rating"
+                ],
+                "properties": {
+                  "order_item_id": {
+                    "type": "integer"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -973,7 +1029,10 @@
             "name": "locale",
             "schema": {
               "type": "string",
-              "enum": ["en", "ar"]
+              "enum": [
+                "en",
+                "ar"
+              ]
             }
           }
         ],
@@ -1018,7 +1077,10 @@
             "name": "locale",
             "schema": {
               "type": "string",
-              "enum": ["en", "ar"]
+              "enum": [
+                "en",
+                "ar"
+              ]
             }
           }
         ],
@@ -1189,7 +1251,16 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "x-bilingual-fields": [
+          "name_ar",
+          "short_description_ar",
+          "description_ar",
+          "ingredients_ar",
+          "usage_instructions_ar",
+          "seo_title_ar",
+          "seo_description_ar"
+        ]
       }
     },
     "/api/v1/storefront/products/{product}": {
@@ -1337,7 +1408,16 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "x-bilingual-fields": [
+          "name_ar",
+          "short_description_ar",
+          "description_ar",
+          "ingredients_ar",
+          "usage_instructions_ar",
+          "seo_title_ar",
+          "seo_description_ar"
+        ]
       }
     },
     "/api/v1/storefront/payments/myfatoorah/local-webhook": {
@@ -1575,7 +1655,17 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": " Public quote rejects coupon_code and client prices. When release gates pass, final_payable_total is shown. Every checkout re-prices on the server.",
+        "x-response-fields": [
+          "tax_status",
+          "tax_total",
+          "tax_calculation_method",
+          "estimated_total",
+          "final_payable_total",
+          "checkout_ready",
+          "checkout_blockers"
+        ]
       }
     },
     "/api/v1/auth/forgot-password": {
@@ -5825,7 +5915,22 @@
         ],
         "responses": {
           "200": {
-            "description": "CSV download; text/csv streamed attachment"
+            "description": "CSV export; not ApiSuccess JSON",
+            "headers": {
+              "Content-Disposition": {
+                "description": "CSV attachment filename",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
@@ -6631,6 +6736,815 @@
           }
         }
       }
+    },
+    "/api/v1/storefront/markets": {
+      "get": {
+        "summary": "List active store markets including currency and default selection",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/settings": {
+      "get": {
+        "summary": "Public storefront feature flags and default market checkout readiness",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/shipping/destinations": {
+      "get": {
+        "summary": "Active shipping cities and wildcard support for one market",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "422": {
+            "description": "Invalid market"
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "market_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/storefront/auth/register": {
+      "post": {
+        "summary": "Create a separate storefront customer account",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "201": {
+            "description": "New customer and Sanctum token"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorefrontCustomerRegisterInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/login": {
+      "post": {
+        "summary": "Log in customer and issue storefront-scoped bearer token",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/me": {
+      "get": {
+        "summary": "Read authenticated customer profile",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/logout": {
+      "post": {
+        "summary": "Revoke current customer token",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/orders": {
+      "get": {
+        "summary": "Paginated orders scoped to the authenticated customer",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/orders/{orderNumber}": {
+      "get": {
+        "summary": "Fetch only an authenticated customer's own order by order number",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "404": {
+            "description": "Not found or not owned"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/storefront/addresses": {
+      "get": {
+        "summary": "Authenticated customer's address book",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create customer address",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorefrontAddressInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/addresses/{address}": {
+      "patch": {
+        "summary": "Update only owned customer address",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorefrontAddressInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete only owned customer address",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "address",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/storefront/wishlist": {
+      "get": {
+        "summary": "Authenticated customer wishlist",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        }
+      },
+      "post": {
+        "summary": "Add active product to wishlist",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/wishlist/{product}": {
+      "delete": {
+        "summary": "Remove product from customer's wishlist",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/storefront/checkout": {
+      "post": {
+        "summary": "Production-only server-calculated idempotent checkout initiating hosted payment; disabled until operational release prerequisites are met",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "201": {
+            "description": "Order reserved and provider hosted payment started"
+          },
+          "202": {
+            "description": "Previously initiated checkout requires reconciliation"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorefrontCheckoutInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/payments/myfatoorah/live-webhook/{marketCode}": {
+      "post": {
+        "summary": "MyFatoorah signed Webhook V2 with provider enquiry; no user bearer token",
+        "tags": [
+          "Storefront"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "202": {
+            "description": "Payment still pending"
+          },
+          "404": {
+            "description": "Live settlement disabled"
+          },
+          "422": {
+            "description": "Invalid signed data / provider mismatch"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketCode",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EG",
+                "AE",
+                "SA"
+              ]
+            }
+          },
+          {
+            "in": "header",
+            "name": "MyFatoorah-Signature",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/refund-requests/{refund}/reject": {
+      "post": {
+        "summary": "Finance rejects pending refund; no money moves",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "422": {
+            "description": "Not pending / maker-checker rule"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/refund-requests/{refund}/cancel": {
+      "post": {
+        "summary": "Original requester withdraws a pending refund; no money moves",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "403": {
+            "description": "Not original requester"
+          },
+          "422": {
+            "description": "Not pending"
+          }
+        }
+      }
+    },
+    "/api/v1/ingredients/{ingredient}/archive": {
+      "post": {
+        "summary": "Archive ingredient while preserving product references",
+        "tags": [
+          "CRM"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archived; no hard-delete"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "products.manage required"
+          }
+        }
+      }
+    },
+    "/api/v1/ritual-quiz/questions/{question}/archive": {
+      "post": {
+        "summary": "Archive quiz question (non-destructive)",
+        "tags": [
+          "CRM"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archived; no hard-delete"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "products.manage required"
+          }
+        }
+      }
+    },
+    "/api/v1/ritual-quiz/options/{option}/archive": {
+      "post": {
+        "summary": "Archive quiz option (non-destructive)",
+        "tags": [
+          "CRM"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archived; no hard-delete"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "products.manage required"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6932,6 +7846,259 @@
             "maxLength": 5000
           }
         }
+      },
+      "StorefrontCustomerRegisterInput": {
+        "type": "object",
+        "required": [
+          "first_name",
+          "email",
+          "phone",
+          "password",
+          "password_confirmation"
+        ],
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12
+          },
+          "password_confirmation": {
+            "type": "string",
+            "minLength": 12
+          }
+        }
+      },
+      "StorefrontAddressInput": {
+        "type": "object",
+        "required": [
+          "type",
+          "first_name",
+          "line1",
+          "city",
+          "country_code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "shipping",
+              "billing"
+            ]
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          },
+          "is_default": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StorefrontCheckoutInput": {
+        "type": "object",
+        "description": "Authenticated, production-only checkout. Server recomputes product prices, stock, shipping and tax; never send client-supplied monetary totals. Retry exactly same idempotency key and payload only.",
+        "required": [
+          "idempotency_key",
+          "market_id",
+          "payment_method",
+          "items",
+          "shipping_address"
+        ],
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "market_id": {
+            "type": "integer"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "CARD",
+              "APPLE_PAY",
+              "GOOGLE_PAY",
+              "KNET"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 25,
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "variant_id",
+                "quantity"
+              ],
+              "properties": {
+                "variant_id": {
+                  "type": "integer"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          },
+          "shipping_address": {
+            "$ref": "#/components/schemas/StorefrontShippingAddressInput"
+          }
+        }
+      },
+      "PartnerApplicationAdminUpdate": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Admin-reviewed status; confirm exact values against controller validation.",
+            "enum": [
+              "pending",
+              "in_review",
+              "approved",
+              "rejected"
+            ]
+          },
+          "internal_notes": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 5000
+          }
+        }
+      },
+      "StorefrontCheckoutBlockerCode": {
+        "type": "string",
+        "enum": [
+          "PRODUCTION_CHECKOUT_NOT_ENABLED",
+          "PAYMENT_PROVIDER_DISABLED",
+          "CONFIGURED_SHIPPING_ORDERS_DISABLED",
+          "MARKET_UNAVAILABLE",
+          "SHIPPING_NOT_CONFIGURED",
+          "TAX_POLICY_NOT_APPROVED",
+          "PAYMENT_MARKET_NOT_CONFIGURED",
+          "PAYMENT_WEBHOOK_NOT_CONFIGURED",
+          "PAYMENT_REDIRECT_NOT_CONFIGURED",
+          "STOREFRONT_MIGRATIONS_MISSING"
+        ]
+      },
+      "StorefrontShippingAddressInput": {
+        "type": "object",
+        "required": [
+          "first_name",
+          "line1",
+          "city",
+          "country_code"
+        ],
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "line1": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "line2": {
+            "type": "string",
+            "maxLength": 255,
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 30,
+            "nullable": true
+          },
+          "country_code": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+          }
+        }
+      },
+      "KhamRefundStatus": {
+        "type": "string",
+        "enum": [
+          "pending_approval",
+          "approved_awaiting_provider",
+          "rejected",
+          "cancelled"
+        ],
+        "description": "Actual gateway refund completion is a separate process and is not implied by finance approval."
+      },
+      "KhamTaxCalculationMethod": {
+        "type": "string",
+        "enum": [
+          "inclusive",
+          "exclusive"
+        ]
+      },
+      "KhamCheckoutProfitStatus": {
+        "type": "string",
+        "description": "Finance report profit_status; exact values should be checked against FinanceReportController before publication."
       }
     },
     "responses": {

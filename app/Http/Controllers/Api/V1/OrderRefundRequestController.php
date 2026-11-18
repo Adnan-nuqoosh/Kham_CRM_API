@@ -91,4 +91,49 @@ class OrderRefundRequestController extends Controller
             'Finance approved. Provider refund is not initiated or confirmed; payment remains paid.',
             'REFUND_APPROVED_AWAITING_PROVIDER');
     }
+    /** Reject a pending refund without initiating any provider money movement. */
+    public function reject(Request $request, OrderRefundRequest $refund)
+    {
+        $data=$request->validate(['reason'=>['required','string','min:5','max:2000']]);
+        $result=DB::transaction(function() use($request,$refund,$data){
+            $locked=OrderRefundRequest::whereKey($refund->id)->lockForUpdate()->firstOrFail();
+            if($locked->status!=='pending_approval'){
+                throw ValidationException::withMessages(['refund'=>['Only pending requests can be rejected.']]);
+            }
+            if((int)$locked->requested_by===(int)$request->user()->id){
+                throw ValidationException::withMessages(['refund'=>['Requester cannot reject their own request as an approver.']]);
+            }
+            $locked->forceFill(['status'=>'rejected'])->save();
+            RefundAuditEvent::create([
+                'refund_request_id'=>$locked->id,'actor_id'=>$request->user()->id,
+                'event_type'=>'finance_rejected','from_status'=>'pending_approval',
+                'to_status'=>'rejected',
+            ]);
+            return $locked->fresh();
+        },5);
+        return ApiResponse::success($result,'Refund request rejected; no provider refund performed.','REFUND_REJECTED');
+    }
+
+    /** Original requester can withdraw only before an approval takes place. */
+    public function cancel(Request $request, OrderRefundRequest $refund)
+    {
+        $result=DB::transaction(function()use($request,$refund){
+            $locked=OrderRefundRequest::whereKey($refund->id)->lockForUpdate()->firstOrFail();
+            if($locked->status!=='pending_approval'){
+                throw ValidationException::withMessages(['refund'=>['Only pending requests can be cancelled.']]);
+            }
+            if((int)$locked->requested_by!==(int)$request->user()->id){
+                abort(403,'Only original requester may cancel this request.');
+            }
+            $locked->forceFill(['status'=>'cancelled'])->save();
+            RefundAuditEvent::create([
+                'refund_request_id'=>$locked->id,'actor_id'=>$request->user()->id,
+                'event_type'=>'requester_cancelled','from_status'=>'pending_approval',
+                'to_status'=>'cancelled',
+            ]);
+            return $locked->fresh();
+        },5);
+        return ApiResponse::success($result,'Refund request cancelled; no provider refund performed.','REFUND_CANCELLED');
+    }
+
 }

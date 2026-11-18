@@ -11,6 +11,7 @@ use App\Services\FulfillmentWarehouseResolver;
 use App\Services\PricingService;
 use App\Services\ShippingQuoteService;
 use App\Services\MarketTaxQuoteService;
+use App\Services\StorefrontCheckoutReadiness;
 use App\Support\ApiResponse;
 use App\Support\StorefrontLocale;
 use Illuminate\Http\JsonResponse;
@@ -103,6 +104,17 @@ class PublicCheckoutQuoteController extends Controller
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
         $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($subtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
+        $checkoutReadiness = app(StorefrontCheckoutReadiness::class)->forMarket($market);
+
+        // Inclusive tax is already inside the taxable prices. Adding it twice
+        // would overcharge customers. These are estimates, not a payment mandate.
+        $taxAmount = $taxReadiness['tax_total'];
+        $method = $taxReadiness['tax_calculation_method'] ?? null;
+        $estimatedTotal = $taxAmount === null ? null
+            : number_format(
+                $subtotal + $shippingTotal + ($method === 'exclusive' ? (float) $taxAmount : 0),
+                4, '.', ''
+            );
 
         // The public response does not expose internal shipping-rule identifiers.
         unset($shippingQuote['rule_id']);
@@ -119,8 +131,13 @@ class PublicCheckoutQuoteController extends Controller
             'total_before_tax' => number_format($subtotal + $shippingTotal, 4, '.', ''),
             'tax_status' => $taxReadiness['tax_status'],
             'tax_total' => $taxReadiness['tax_total'],
-            'is_final_payable_total' => $taxReadiness['is_final_payable_total'],
-        ], 'Provisional quote only; tax preview is non-binding and final payable remains disabled.', 'STOREFRONT_QUOTE')
+            'tax_calculation_method' => $method,
+            'estimated_total' => $estimatedTotal,
+            'is_final_payable_total' => $checkoutReadiness['ready'],
+            'final_payable_total' => $checkoutReadiness['ready'] ? $estimatedTotal : null,
+            'checkout_ready' => $checkoutReadiness['ready'],
+            'checkout_blockers' => $checkoutReadiness['blockers'],
+        ], 'Quote estimate; checkout must independently reprice and reserve stock.', 'STOREFRONT_QUOTE')
             ->header('Cache-Control', 'no-store');
     }
 }

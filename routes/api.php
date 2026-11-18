@@ -19,6 +19,14 @@ use App\Http\Controllers\Api\V1\{
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
+use App\Http\Controllers\Api\V1\PublicStorefrontBootstrapController;
+use App\Http\Controllers\Api\V1\StorefrontAccountController;
+use App\Http\Controllers\Api\V1\StorefrontCustomerOrdersController;
+use App\Http\Controllers\Api\V1\StorefrontAddressController;
+use App\Http\Controllers\Api\V1\StorefrontWishlistController;
+use App\Http\Controllers\Api\V1\StorefrontReviewSubmissionController;
+use App\Http\Controllers\Api\V1\StorefrontProductionCheckoutController;
+use App\Http\Controllers\Api\V1\StorefrontLiveMyFatoorahWebhookController;
 use App\Http\Controllers\Api\V1\IngredientController;
 use App\Http\Controllers\Api\V1\RitualQuizController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
@@ -31,6 +39,27 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/payments/myfatoorah/live-webhook/{marketCode}', StorefrontLiveMyFatoorahWebhookController::class)->where('marketCode', 'EG|AE|SA')->middleware('throttle:storefront-quote');
+    Route::post('/storefront/auth/register', [StorefrontAccountController::class, 'register'])->middleware('throttle:login');
+    Route::post('/storefront/auth/login', [StorefrontAccountController::class, 'login'])->middleware('throttle:login');
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/storefront/auth/me', [StorefrontAccountController::class, 'me']);
+        Route::post('/storefront/auth/logout', [StorefrontAccountController::class, 'logout']);
+        Route::post('/storefront/checkout', StorefrontProductionCheckoutController::class)->middleware('throttle:storefront-test-order');
+        Route::get('/storefront/orders', [StorefrontCustomerOrdersController::class, 'index']);
+        Route::get('/storefront/wishlist', [StorefrontWishlistController::class, 'index']);
+        Route::post('/storefront/wishlist', [StorefrontWishlistController::class, 'store']);
+        Route::delete('/storefront/wishlist/{product}', [StorefrontWishlistController::class, 'destroy']);
+        Route::post('/storefront/products/{product}/reviews', [StorefrontReviewSubmissionController::class, 'store']);
+        Route::get('/storefront/orders/{orderNumber}', [StorefrontCustomerOrdersController::class, 'show']);
+        Route::get('/storefront/addresses', [StorefrontAddressController::class, 'index']);
+        Route::post('/storefront/addresses', [StorefrontAddressController::class, 'store']);
+        Route::patch('/storefront/addresses/{address}', [StorefrontAddressController::class, 'update']);
+        Route::delete('/storefront/addresses/{address}', [StorefrontAddressController::class, 'destroy']);
+    });
+    Route::get('/storefront/markets', [PublicStorefrontBootstrapController::class, 'markets'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/settings', [PublicStorefrontBootstrapController::class, 'settings'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/shipping/destinations', [PublicStorefrontBootstrapController::class, 'destinations'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/community', \App\Http\Controllers\Api\V1\PublicCommunityController::class)->middleware('throttle:storefront-quote');
     Route::get('/storefront/homepage', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
     Route::post('/storefront/partners/apply', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'store'])->middleware('throttle:login');
@@ -101,13 +130,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/ritual-quiz/questions', [RitualQuizController::class, 'adminIndex'])->middleware('permission:products.view');
         Route::post('/ritual-quiz/questions', [RitualQuizController::class, 'storeQuestion'])->middleware('permission:products.manage');
         Route::patch('/ritual-quiz/questions/{question}', [RitualQuizController::class, 'updateQuestion'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/questions/{question}/archive', [RitualQuizController::class, 'archiveQuestion'])->middleware('permission:products.manage');
         Route::post('/ritual-quiz/questions/{question}/options', [RitualQuizController::class, 'storeOption'])->middleware('permission:products.manage');
         Route::patch('/ritual-quiz/options/{option}', [RitualQuizController::class, 'updateOption'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/options/{option}/archive', [RitualQuizController::class, 'archiveOption'])->middleware('permission:products.manage');
         Route::put('/ritual-quiz/options/{option}/products', [RitualQuizController::class, 'syncProducts'])->middleware('permission:products.manage');
         Route::get('/ingredients', [IngredientController::class, 'index'])->middleware('permission:products.view');
         Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show'])->middleware('permission:products.view');
         Route::post('/ingredients', [IngredientController::class, 'store'])->middleware('permission:products.manage');
         Route::patch('/ingredients/{ingredient}', [IngredientController::class, 'update'])->middleware('permission:products.manage');
+        Route::post('/ingredients/{ingredient}/archive', [IngredientController::class, 'archive'])->middleware('permission:products.manage');
 
         Route::middleware('permission:products.manage')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
@@ -215,6 +247,10 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:refunds.approve');
         Route::post('/refund-requests/{refund}/approve', [OrderRefundRequestController::class, 'approve'])
             ->middleware('permission:refunds.approve');
+        Route::post('/refund-requests/{refund}/reject', [OrderRefundRequestController::class, 'reject'])
+            ->middleware('permission:refunds.approve');
+        Route::post('/refund-requests/{refund}/cancel', [OrderRefundRequestController::class, 'cancel'])
+            ->middleware('permission:orders.manage');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');

@@ -16,8 +16,11 @@ use Illuminate\Validation\ValidationException;
 
 class ProductReviewController extends Controller
 {
-    public function publicIndex(Request $request, Product $product)
+    public function publicIndex(Request $request, string $product)
     {
+        $product = Product::query()->where('slug', $product)
+            ->when(ctype_digit($product), fn ($query) => $query->orWhere('id', (int) $product))
+            ->firstOrFail();
         abort_unless($product->status === ProductStatus::Active, 404);
         $data = $request->validate(['page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50']]);
@@ -47,7 +50,7 @@ class ProductReviewController extends Controller
             'status' => ['sometimes', Rule::in(['pending', 'approved', 'rejected'])],
             'product_id' => ['sometimes', 'integer', 'exists:products,id'],
         ]);
-        $query = ProductReview::query()->with('product:id,name');
+        $query = ProductReview::query()->with('product:id,name,slug');
         if (isset($data['status'])) $query->where('status', $data['status']);
         if (isset($data['product_id'])) $query->where('product_id', $data['product_id']);
         return ApiResponse::success($query->latest('id')->paginate(20));
