@@ -60,6 +60,18 @@ class OrderStatusService
                 ]);
             }
 
+            if ($next === OrderStatus::Cancelled
+                && (DB::table('myfatoorah_checkout_reservations')
+                    ->where('order_id',$locked->id)
+                    ->whereIn('status',['reserved','requesting','uncertain','initiated'])
+                    ->exists()
+                    || $locked->payments()->where('provider','myfatoorah')
+                        ->where('status',PaymentStatus::Pending->value)->exists())) {
+                throw ValidationException::withMessages([
+                    'status'=>['Pending or uncertain payment must be reconciled before cancellation and inventory release.'],
+                ]);
+            }
+
             if ($next === OrderStatus::Cancelled) {
                 foreach ($locked->items as $item) {
                     $inventory->release($item->variant_id, $locked->warehouse_id, $item->quantity, $locked->id);
