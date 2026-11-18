@@ -28,14 +28,28 @@ final class PublicStorefrontBootstrapController extends Controller
             ->header('Cache-Control', 'public, max-age=60');
     }
 
-    public function settings()
+    public function settings(Request $request)
     {
-        $market = Market::query()->with('currency')
+        $data = $request->validate([
+            'market_id' => ['sometimes', 'required', 'integer', 'exists:markets,id'],
+        ]);
+
+        // Keep the global default market distinct from the market selected
+        // by a customer. Readiness and currency must follow the selection.
+        $defaultMarket = Market::query()->with('currency')
             ->where('is_active', true)->where('is_default', true)->first();
-        if (!$market || !$market->currency || !$market->currency->is_active) {
-            $market = Market::query()->with('currency')->where('is_active', true)->orderBy('id')->get()
+        if (!$defaultMarket || !$defaultMarket->currency || !$defaultMarket->currency->is_active) {
+            $defaultMarket = Market::query()->with('currency')->where('is_active', true)->orderBy('id')->get()
                 ->first(fn (Market $candidate) => $candidate->currency && $candidate->currency->is_active);
         }
+
+        $market = isset($data['market_id'])
+            ? Market::query()->with('currency')->findOrFail($data['market_id'])
+            : $defaultMarket;
+        if ($market && (!$market->is_active || !$market->currency || !$market->currency->is_active)) {
+            abort(404);
+        }
+
         $ready = $market ? app(StorefrontCheckoutReadiness::class)->forMarket($market) : [
             'ready' => false,
             'blockers' => ['MARKET_UNAVAILABLE'],
@@ -44,8 +58,10 @@ final class PublicStorefrontBootstrapController extends Controller
         ];
 
         return ApiResponse::success([
-            'default_market_id' => $market?->id,
-            'default_market_code' => $market?->code,
+            'default_market_id' => $defaultMarket?->id,
+            'default_market_code' => $defaultMarket?->code,
+            'market_id' => $market?->id,
+            'market_code' => $market?->code,
             'currency_code' => $market?->currency?->code,
             'features' => [
                 'production_checkout_enabled' => $ready['ready'],
