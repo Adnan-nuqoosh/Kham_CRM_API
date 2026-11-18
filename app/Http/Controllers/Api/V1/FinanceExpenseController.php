@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FinanceExpense;
 use App\Models\Market;
 use App\Support\ApiResponse;
+use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -19,7 +20,18 @@ class FinanceExpenseController extends Controller
         if ($request->filled('from')) $q->whereDate('incurred_on', '>=', $request->input('from'));
         if ($request->filled('to')) $q->whereDate('incurred_on', '<=', $request->input('to'));
         if ($request->filled('category')) $q->where('category', $request->input('category'));
-        return ApiResponse::success($q->orderByDesc('incurred_on')->orderByDesc('id')->paginate(25), 'Expenses fetched.', 'FINANCE_EXPENSES');
+        $request->validate([
+            'market_id'=>['sometimes','integer','exists:markets,id'],
+            'from'=>['sometimes','date_format:Y-m-d'],
+            'to'=>['sometimes','date_format:Y-m-d','after_or_equal:from'],
+            'category'=>['sometimes','string','max:80'],
+            'per_page'=>['sometimes','integer','min:1','max:100'],
+            'page'=>['sometimes','integer','min:1'],
+        ]);
+        $page=$q->orderByDesc('incurred_on')->orderByDesc('id')
+            ->paginate(PaginationMeta::perPage($request,25,100));
+        // Retain the original paginator in data; add stable meta pagination.
+        return ApiResponse::success($page,'Expenses fetched.','FINANCE_EXPENSES',200,PaginationMeta::from($page));
     }
 
     public function store(Request $request)
