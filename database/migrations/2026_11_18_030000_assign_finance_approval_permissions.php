@@ -12,8 +12,9 @@ return new class extends Migration {
         foreach($names as $name) Permission::findOrCreate($name,'web');
         $admin=Role::where('name','Super Admin')->where('guard_name','web')->first();
         if($admin) $admin->givePermissionTo($names);
-        // Create the Finance role, but do NOT assign existing staff automatically.
-        $finance=Role::firstOrCreate(['name'=>'Finance','guard_name'=>'web']);
+        // Dedicated approver role: do not elevate an existing general Finance team.
+        // No users are assigned automatically.
+        $finance=Role::firstOrCreate(['name'=>'Finance Approver','guard_name'=>'web']);
         $finance->givePermissionTo($names);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
