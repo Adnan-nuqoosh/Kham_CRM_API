@@ -27,3 +27,5 @@ jobs:
           find app database/migrations routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Run isolated SQLite feature tests
         run: vendor/bin/phpunit --display-warnings --colors=never
+      - name: Verify OpenAPI JSON route and method coverage
+        run: php scripts/local_openapi_full_coverage.php
