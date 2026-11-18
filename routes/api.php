@@ -244,6 +244,10 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:refunds.approve');
         Route::post('/refund-requests/{refund}/approve', [OrderRefundRequestController::class, 'approve'])
             ->middleware('permission:refunds.approve');
+        Route::post('/refund-requests/{refund}/reject', [OrderRefundRequestController::class, 'reject'])
+            ->middleware('permission:refunds.approve');
+        Route::post('/refund-requests/{refund}/cancel', [OrderRefundRequestController::class, 'cancel'])
+            ->middleware('permission:orders.manage');
 
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('permission:orders.view');
