@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\{
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\PublicCheckoutQuoteController;
 use App\Http\Controllers\Api\V1\PublicStorefrontCatalogController;
+use App\Http\Controllers\Api\V1\PublicStorefrontBootstrapController;
 use App\Http\Controllers\Api\V1\IngredientController;
 use App\Http\Controllers\Api\V1\RitualQuizController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
@@ -31,6 +32,9 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('/storefront/markets', [PublicStorefrontBootstrapController::class, 'markets'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/settings', [PublicStorefrontBootstrapController::class, 'settings'])->middleware('throttle:storefront-quote');
+    Route::get('/storefront/shipping/destinations', [PublicStorefrontBootstrapController::class, 'destinations'])->middleware('throttle:storefront-quote');
     Route::get('/storefront/community', \App\Http\Controllers\Api\V1\PublicCommunityController::class)->middleware('throttle:storefront-quote');
     Route::get('/storefront/homepage', [\App\Http\Controllers\Api\V1\HomepageSectionController::class, 'publicIndex'])->middleware('throttle:storefront-quote');
     Route::post('/storefront/partners/apply', [\App\Http\Controllers\Api\V1\PartnerApplicationController::class, 'store'])->middleware('throttle:login');
