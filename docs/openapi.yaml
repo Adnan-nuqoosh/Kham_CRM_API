@@ -1,3 +1,5 @@
+# DEPRECATED: historical specification. Use docs/openapi.json as the canonical API contract.
+# This YAML may omit storefront customer accounts, live payment gates and refund APIs.
 openapi: 3.0.3
 info:
   title: KHAM Commerce OS API
