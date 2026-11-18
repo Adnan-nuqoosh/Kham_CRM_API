@@ -12,6 +12,7 @@ use App\Services\MyFatoorahLiveClient;
 use App\Services\OrderService;
 use App\Services\PricingService;
 use App\Services\ShippingQuoteService;
+use App\Services\StorefrontCheckoutReadiness;
 use App\Models\ProductVariant;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
@@ -61,6 +62,15 @@ final class StorefrontProductionCheckoutController extends Controller
             'tax_total'=>['prohibited'],'customer_id'=>['prohibited'],
             'warehouse_id'=>['prohibited'],'payment_status'=>['prohibited'],
         ]);
+        $marketForReadiness=Market::with('currency')->findOrFail($data['market_id']);
+        $readiness=app(StorefrontCheckoutReadiness::class)->forMarket($marketForReadiness);
+        if (!$readiness['ready']) {
+            return ApiResponse::error(
+                'Checkout is not ready for the selected market.',
+                'CHECKOUT_NOT_READY',503,['checkout'=>$readiness['blockers']]
+            )->header('Cache-Control','no-store');
+        }
+
         // All checkout dimensions are bound into the idempotency fingerprint.
         usort($data['items'],fn($a,$b)=>(int)$a['variant_id']<=>(int)$b['variant_id']);
         $keyHash=hash('sha256','production:'.$account->id.':'.$data['idempotency_key']);
