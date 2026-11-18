@@ -69,6 +69,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan kham:release-audit
+php artisan kham:payment-reconciliation-report --older-than=30 --limit=50
 php artisan route:list --path=api/v1/storefront
 ```
 
@@ -97,3 +98,12 @@ Do not run `migrate:fresh`, `db:wipe`, `key:generate` on an existing deployed ap
 - Production host credentials, DNS/TLS validation, backups, real deployment authorization and post-deploy checks.
 
 **Do not mark production deployment complete merely because CI tests pass.**
+
+
+## Automated verification snapshot
+
+- CI source lint and PHPUnit: **28 tests / 102 assertions passed** on 2026-11-18.
+- API operation contract parity: **143/143**, missing 0, extra 0.
+- CI exercises a mocked provider; this is **not** a real MyFatoorah sandbox purchase and not a substitute for external webhook delivery testing.
+- Read-only payment triage command: `php artisan kham:payment-reconciliation-report --older-than=30 --limit=50`. It never retries, captures, refunds, or changes inventory.
+- Read-only release checks: `php artisan kham:release-audit`. On local XAMPP it will flag intentionally insecure development settings such as `APP_DEBUG=true` and HTTP APP_URL; such warnings are expected locally.
