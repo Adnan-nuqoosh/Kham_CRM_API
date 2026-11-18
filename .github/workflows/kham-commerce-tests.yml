@@ -1,0 +1,29 @@
+name: KHAM Commerce PHP tests
+
+on:
+  push:
+    branches:
+      - feature/storefront-phase1-phase2-20261118
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_sqlite, sqlite3, intl, xml
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHP syntax lint for project classes and migrations
+        run: |
+          find app database/migrations routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Run isolated SQLite feature tests
+        run: php artisan test --no-ansi
