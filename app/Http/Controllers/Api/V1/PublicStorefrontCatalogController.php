@@ -67,6 +67,8 @@ class PublicStorefrontCatalogController extends Controller
         } else {
             $query->orderByDesc('products.id');
         }
+        $query->withCount(['reviews as review_count' => fn ($r) => $r->where('status', 'approved')])
+            ->withAvg(['reviews as average_rating' => fn ($r) => $r->where('status', 'approved')], 'rating');
         $page = $query->with(['media', 'brand', 'category'])
             ->paginate(PaginationMeta::perPage($request, 20));
         $locale = StorefrontLocale::resolve($request);
@@ -80,7 +82,10 @@ class PublicStorefrontCatalogController extends Controller
     {
         $data = $request->validate(['market_id' => ['required', 'integer', 'exists:markets,id']]);
         $market = $this->market((int) $data['market_id']);
-        $product = Product::query()->where('slug', $product)
+        $product = Product::query()
+            ->withCount(['reviews as review_count' => fn ($r) => $r->where('status', 'approved')])
+            ->withAvg(['reviews as average_rating' => fn ($r) => $r->where('status', 'approved')], 'rating')
+            ->where('slug', $product)
             ->when(ctype_digit($product), fn ($q) => $q->orWhere('id', (int) $product))
             ->firstOrFail();
         abort_unless($product->status === ProductStatus::Active
@@ -135,6 +140,8 @@ class PublicStorefrontCatalogController extends Controller
             'id' => $product->id,
             'slug' => $product->slug,
             'badges' => app(\App\Services\StorefrontProductBadgeService::class)->badges($product, (int) $market->id),
+            'review_count' => (int) ($product->review_count ?? 0),
+            'average_rating' => $product->average_rating === null ? null : round((float) $product->average_rating, 2),
             'locale' => $locale,
             'name' => StorefrontLocale::text($product->name, $product->name_ar, $locale),
             'name_ar' => $product->name_ar,
