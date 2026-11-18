@@ -64,7 +64,6 @@ final class StorefrontProductionCheckoutController extends Controller
         // All checkout dimensions are bound into the idempotency fingerprint.
         usort($data['items'],fn($a,$b)=>(int)$a['variant_id']<=>(int)$b['variant_id']);
         $keyHash=hash('sha256','production:'.$account->id.':'.$data['idempotency_key']);
-        $providerKey=$data['idempotency_key'];
         unset($data['idempotency_key']);
         $fingerprint=hash('sha256',json_encode(['account_id'=>$account->id,'payload'=>$data],JSON_THROW_ON_ERROR));
 
@@ -124,11 +123,24 @@ final class StorefrontProductionCheckoutController extends Controller
             ]);
             DB::table('storefront_checkout_attempts')->where('id',$attempt->id)
                 ->update(['order_id'=>$order->id,'updated_at'=>now()]);
+            DB::table('myfatoorah_checkout_reservations')->insert([
+                'order_id'=>$order->id,'idempotency_key_hash'=>$keyHash,
+                'status'=>'reserved','amount'=>$order->grand_total,
+                'currency_code'=>$order->currency_code,
+                'payment_method'=>$data['payment_method'],
+                'created_at'=>now(),'updated_at'=>now(),
+            ]);
             return [$order,true];
         },3);
         [$order,$isNew]=$created;
         if (!$isNew) {
             $reservation=DB::table('myfatoorah_checkout_reservations')->where('order_id',$order->id)->first();
+            if ($order->payment_status === PaymentStatus::Paid) {
+                return ApiResponse::success([
+                    'order_number'=>$order->order_number,'payment_status'=>'paid',
+                ],'Order payment already confirmed.','CHECKOUT_ALREADY_PAID')
+                    ->header('Cache-Control','no-store');
+            }
             if ($reservation && $reservation->status==='initiated' && $reservation->payment_url) {
                 return ApiResponse::success([
                     'order_number'=>$order->order_number,
@@ -144,16 +156,16 @@ final class StorefrontProductionCheckoutController extends Controller
                 ->header('Cache-Control','no-store');
         }
 
-        // Durably reserve before calling external provider. On failure, leave
-        // order/payment unresolved instead of creating a duplicate charge.
-        $reservationId=DB::table('myfatoorah_checkout_reservations')->insertGetId([
-            'order_id'=>$order->id,'idempotency_key_hash'=>$keyHash,
-            'status'=>'requesting','amount'=>$order->grand_total,
-            'currency_code'=>$order->currency_code,
-            'payment_method'=>$data['payment_method'],
-            'provider_requested_at'=>now(),
-            'created_at'=>now(),'updated_at'=>now(),
-        ]);
+        // Reservation is committed atomically with the order above. Mark
+        // provider request started before the external network call.
+        $reservationId=DB::table('myfatoorah_checkout_reservations')
+            ->where('order_id',$order->id)->value('id');
+        DB::table('myfatoorah_checkout_reservations')->where('id',$reservationId)
+            ->where('status','reserved')->update([
+                'status'=>'requesting',
+                'provider_requested_at'=>now(),'updated_at'=>now(),
+            ]);
+        $providerKey=hash('sha256','live:'.$order->order_number);
         try {
             $response=$client->createHostedPayment(
                 $order->market->code,$order->order_number,
