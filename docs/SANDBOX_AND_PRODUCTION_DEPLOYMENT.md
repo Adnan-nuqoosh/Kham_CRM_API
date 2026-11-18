@@ -107,3 +107,16 @@ Do not run `migrate:fresh`, `db:wipe`, `key:generate` on an existing deployed ap
 - CI exercises a mocked provider; this is **not** a real MyFatoorah sandbox purchase and not a substitute for external webhook delivery testing.
 - Read-only payment triage command: `php artisan kham:payment-reconciliation-report --older-than=30 --limit=50`. It never retries, captures, refunds, or changes inventory.
 - Read-only release checks: `php artisan kham:release-audit`. On local XAMPP it will flag intentionally insecure development settings such as `APP_DEBUG=true` and HTTP APP_URL; such warnings are expected locally.
+
+
+## Security audit closeout — 2026-11-18
+
+A Composer audit originally found 10 dependency advisories affecting 6 packages. The locked dependencies were upgraded on this feature branch and verified by a fresh GitHub Actions run (#48):
+- `composer audit --locked --no-interaction`: **No security vulnerability advisories found**
+- PHP syntax lint: **PASS**
+- PHPUnit: **29 tests / 118 assertions PASS**
+- OpenAPI: **143 operations accounted for; 0 missing, 0 extra**
+
+The one-time workflow which had temporary branch write permission was removed after `composer.lock` was updated. Regular CI continues to enforce Composer audit on every push and PR.
+
+Actual provider payment, approved market shipping/tax policy, external security penetration test, staging load test and real server rollout are still unverified. Keep live release flags off until those operational gates are satisfied.
