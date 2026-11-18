@@ -52,7 +52,7 @@ final class StorefrontAccountController extends Controller
             return ApiResponse::error('Invalid credentials.', 'STOREFRONT_AUTH_INVALID', 401);
         }
         return ApiResponse::success([
-            'token'=>$account->createToken('storefront',['storefront'])->plainTextToken,
+            'token'=>$account->createToken('storefront',['storefront'],now()->addDays(30))->plainTextToken,
             'token_type'=>'Bearer', 'customer'=>$account->customer,
         ],'Authenticated.','STOREFRONT_LOGIN')->header('Cache-Control','no-store');
     }
