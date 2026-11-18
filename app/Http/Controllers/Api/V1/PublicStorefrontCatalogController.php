@@ -21,6 +21,9 @@ class PublicStorefrontCatalogController extends Controller
         $data = $request->validate([
             'market_id' => ['required', 'integer', 'exists:markets,id'],
             'search' => ['sometimes', 'string', 'max:120'],
+            'brand' => ['sometimes', 'string', 'max:160'],
+            'category' => ['sometimes', 'string', 'max:160'],
+            'sort' => ['sometimes', 'in:newest,name,price_asc,price_desc'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
         $market = $this->market((int) $data['market_id']);
@@ -31,7 +34,40 @@ class PublicStorefrontCatalogController extends Controller
             $query->where(fn ($q) => $q->where('name', 'like', '%'.$term.'%')
                 ->orWhere('name_ar', 'like', '%'.$term.'%'));
         }
-        $page = $query->with(['media', 'brand', 'category'])->orderBy('id')
+        if (!empty($data['brand'])) {
+            $query->whereHas('brand', fn ($q) => $q->where('slug', $data['brand'])
+                ->orWhere('id', ctype_digit($data['brand']) ? (int) $data['brand'] : -1));
+        }
+        if (!empty($data['category'])) {
+            $query->whereHas('category', fn ($q) => $q->where('slug', $data['category'])
+                ->orWhere('id', ctype_digit($data['category']) ? (int) $data['category'] : -1));
+        }
+
+        $sort = $data['sort'] ?? 'newest';
+        if ($sort === 'name') {
+            $query->orderBy('name')->orderBy('id');
+        } elseif (in_array($sort, ['price_asc', 'price_desc'], true)) {
+            $direction = $sort === 'price_asc' ? 'asc' : 'desc';
+            $query->orderBy(
+                \App\Models\ProductMarketPrice::query()
+                    ->select('price')
+                    ->join('product_variants as sv', 'sv.id', '=', 'product_market_prices.variant_id')
+                    ->whereColumn('sv.product_id', 'products.id')
+                    ->where('sv.is_active', true)
+                    ->where('product_market_prices.market_id', $market->id)
+                    ->where('product_market_prices.currency_id', $market->currency_id)
+                    ->where('product_market_prices.is_active', true)
+                    ->where(fn ($dates) => $dates->whereNull('product_market_prices.starts_at')
+                        ->orWhere('product_market_prices.starts_at', '<=', now()))
+                    ->where(fn ($dates) => $dates->whereNull('product_market_prices.ends_at')
+                        ->orWhere('product_market_prices.ends_at', '>=', now()))
+                    ->orderBy('price', $direction)->limit(1),
+                $direction
+            )->orderBy('products.id');
+        } else {
+            $query->orderByDesc('products.id');
+        }
+        $page = $query->with(['media', 'brand', 'category'])
             ->paginate(PaginationMeta::perPage($request, 20));
         $locale = StorefrontLocale::resolve($request);
         return ApiResponse::success(
@@ -40,10 +76,13 @@ class PublicStorefrontCatalogController extends Controller
         )->header('Cache-Control', 'no-store');
     }
 
-    public function show(Request $request, Product $product)
+    public function show(Request $request, string $product)
     {
         $data = $request->validate(['market_id' => ['required', 'integer', 'exists:markets,id']]);
         $market = $this->market((int) $data['market_id']);
+        $product = Product::query()->where('slug', $product)
+            ->when(ctype_digit($product), fn ($q) => $q->orWhere('id', (int) $product))
+            ->firstOrFail();
         abort_unless($product->status === ProductStatus::Active
             && $product->variants()->where(fn ($q) => $this->sellableVariant($q, $market))->exists(), 404);
         $product->loadMissing(['media', 'brand', 'category']);
@@ -125,6 +164,8 @@ class PublicStorefrontCatalogController extends Controller
             'media' => $images,
             'variants' => $variants->map(fn ($v) => [
                 'id' => $v->id,
+                'sku' => $v->sku,
+                'available_qty' => max(0, (int) ($stockByVariant->get($v->id)?->available ?? 0)),
                 'title' => $v->title,
                 'price' => $v->prices->first()?->price,
                 'compare_at_price' => $v->prices->first()?->compare_at_price,
