@@ -84,4 +84,11 @@ class IngredientController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
     }
+    public function archive(Ingredient $ingredient)
+    {
+        $ingredient->update(['is_active' => false]);
+        return ApiResponse::success($ingredient->fresh(),
+            'Ingredient archived; linked products remain intact.', 'INGREDIENT_ARCHIVED');
+    }
+
 }
