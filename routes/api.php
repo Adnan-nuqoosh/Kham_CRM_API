@@ -130,13 +130,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/ritual-quiz/questions', [RitualQuizController::class, 'adminIndex'])->middleware('permission:products.view');
         Route::post('/ritual-quiz/questions', [RitualQuizController::class, 'storeQuestion'])->middleware('permission:products.manage');
         Route::patch('/ritual-quiz/questions/{question}', [RitualQuizController::class, 'updateQuestion'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/questions/{question}/archive', [RitualQuizController::class, 'archiveQuestion'])->middleware('permission:products.manage');
         Route::post('/ritual-quiz/questions/{question}/options', [RitualQuizController::class, 'storeOption'])->middleware('permission:products.manage');
         Route::patch('/ritual-quiz/options/{option}', [RitualQuizController::class, 'updateOption'])->middleware('permission:products.manage');
+        Route::post('/ritual-quiz/options/{option}/archive', [RitualQuizController::class, 'archiveOption'])->middleware('permission:products.manage');
         Route::put('/ritual-quiz/options/{option}/products', [RitualQuizController::class, 'syncProducts'])->middleware('permission:products.manage');
         Route::get('/ingredients', [IngredientController::class, 'index'])->middleware('permission:products.view');
         Route::get('/ingredients/{ingredient}', [IngredientController::class, 'show'])->middleware('permission:products.view');
         Route::post('/ingredients', [IngredientController::class, 'store'])->middleware('permission:products.manage');
         Route::patch('/ingredients/{ingredient}', [IngredientController::class, 'update'])->middleware('permission:products.manage');
+        Route::post('/ingredients/{ingredient}/archive', [IngredientController::class, 'archive'])->middleware('permission:products.manage');
 
         Route::middleware('permission:products.manage')->group(function () {
             Route::post('/products', [ProductController::class, 'store']);
