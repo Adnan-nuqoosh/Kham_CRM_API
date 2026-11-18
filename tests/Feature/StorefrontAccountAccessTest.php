@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\StorefrontAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\TestCase;
 
 final class StorefrontAccountAccessTest extends TestCase
@@ -53,8 +54,8 @@ final class StorefrontAccountAccessTest extends TestCase
         $account=$this->account('one@example.test');
         $another=$this->account('two@example.test');
         // Guard denies owner-scoped lookups even when an order number is guessed.
-        $this->actingAs($account,'sanctum')
-            ->getJson('/api/v1/storefront/orders/KH-2026-000001')
+        Sanctum::actingAs($account, ['storefront']);
+        $this->getJson('/api/v1/storefront/orders/KH-2026-000001')
             ->assertNotFound();
 
         $this->assertNotEquals($account->customer_id,$another->customer_id);
@@ -65,8 +66,8 @@ final class StorefrontAccountAccessTest extends TestCase
         $admin=User::create([
             'name'=>'Admin','email'=>'admin@example.test','password'=>'a-long-password',
         ]);
-        $this->actingAs($admin,'sanctum')
-            ->getJson('/api/v1/storefront/addresses')->assertForbidden();
+        Sanctum::actingAs($admin, ['storefront']);
+        $this->getJson('/api/v1/storefront/addresses')->assertForbidden();
     }
 
     public function test_guest_cannot_access_storefront_orders(): void
