@@ -53,12 +53,32 @@ final class StorefrontAccountAccessTest extends TestCase
     {
         $account=$this->account('one@example.test');
         $another=$this->account('two@example.test');
-        // Guard denies owner-scoped lookups even when an order number is guessed.
+        $currency=\App\Models\Currency::create([
+            'code'=>'EGP','name'=>'Egyptian Pound','symbol'=>'EGP',
+            'decimal_places'=>2,'rate_to_base'=>1,'is_base'=>true,'is_active'=>true,
+        ]);
+        $market=\App\Models\Market::create([
+            'code'=>'EG','name'=>'Egypt','country_code'=>'EG','currency_id'=>$currency->id,
+            'timezone'=>'Africa/Cairo','is_default'=>true,'is_active'=>true,
+        ]);
+        $warehouse=\App\Models\Warehouse::create([
+            'code'=>'EG-01','name'=>'Egypt','market_id'=>$market->id,'is_active'=>true,
+        ]);
+        $order=Order::create([
+            'order_number'=>'KH-2026-000001','customer_id'=>$another->customer_id,
+            'market_id'=>$market->id,'warehouse_id'=>$warehouse->id,'currency_code'=>'EGP',
+            'status'=>'pending','payment_status'=>'pending','fulfillment_status'=>'unfulfilled',
+            'subtotal'=>'100.0000','shipping_total'=>'0.0000','discount_total'=>'0.0000',
+            'tax_total'=>'0.0000','grand_total'=>'100.0000','placed_at'=>now(),
+        ]);
         Sanctum::actingAs($account, ['storefront']);
-        $this->getJson('/api/v1/storefront/orders/KH-2026-000001')
+        $this->getJson('/api/v1/storefront/orders/'.$order->order_number)
             ->assertNotFound();
-
-        $this->assertNotEquals($account->customer_id,$another->customer_id);
+        $this->getJson('/api/v1/storefront/orders')
+            ->assertOk()->assertJsonCount(0,'data');
+        Sanctum::actingAs($another, ['storefront']);
+        $this->getJson('/api/v1/storefront/orders/'.$order->order_number)
+            ->assertOk()->assertJsonPath('data.order_number',$order->order_number);
     }
 
     public function test_crm_user_cannot_access_storefront_addresses(): void
