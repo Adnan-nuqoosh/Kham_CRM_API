@@ -1,64 +1,84 @@
-# Storefront Phase 1 / Phase 2 implementation status
+# KHAM Commerce — Phase 1 & 2 implementation and release checklist
 
 Branch: `feature/storefront-phase1-phase2-20261118`
-Original requirements: 2026-11-17 storefront/backend change request.
+Change request date: 2026-11-17.
+Canonical contract: `docs/openapi.json`.
+**Do not deploy or enable live charges until the release checklist is satisfied.**
 
-## Phase 1: implemented, requires QA
+## Phase 1 — Implemented backend
 
-- `GET /api/v1/storefront/markets`: active market IDs, codes, currency and default marker.
-- `GET /api/v1/storefront/settings`: feature flags and fail-closed checkout readiness.
-- `GET /api/v1/storefront/shipping/destinations?market_id={id}`: active shippable country, named city keys and `other_cities_supported` (wildcard `*`).
-- `GET /api/v1/storefront/products?market_id={id}&brand={slug}&category={slug}&sort=newest|name|price_asc|price_desc`: adds brand/category and ordering controls; existing search and pagination remain.
-- `GET /api/v1/storefront/products/{id-or-slug}?market_id={id}`: product detail accepts either identifier.
-- Storefront variant entries now expose `sku` and `available_qty` (the fulfillment warehouse's available stock).
-- `POST /api/v1/storefront/checkout/quote` now returns `checkout_ready:false` and machine-readable `checkout_blockers`. It remains explicitly non-binding; no checkout/payment can be completed from quote alone.
+- `GET /api/v1/storefront/markets`: active markets/currencies/default.
+- `GET /api/v1/storefront/settings`: feature availability, checkout readiness and blockers.
+- `GET /api/v1/storefront/shipping/destinations?market_id={id}`: active city list and wildcard `*` support.
+- `GET /api/v1/storefront/products`: `market_id`, `search`, `brand`, `category`, `sort=newest|name|price_asc|price_desc` and pagination.
+- `GET /api/v1/storefront/products/{id-or-slug}`: numeric ID or slug.
+- Product list/detail exposes images, sellable variants, `sku`, `available_qty`, approved `review_count` and `average_rating`.
+- Reviews GET supports product ID/slug.
+- `POST /api/v1/storefront/checkout/quote`: server-priced, non-binding quote with `tax_calculation_method`, `estimated_total`, `checkout_ready`, `checkout_blockers`, and gated `final_payable_total`. No payment is collected by quote.
+- Existing homepage, category, brand, ingredient, quiz, ritual, partner, newsletter and community contracts remain available.
 
-The existing public catalog/category/brand/ritual/homepage APIs are unchanged.
+## Phase 2 — Implemented backend code, integration testing pending
 
-## Phase 2: implementation progress (NOT production-ready)
+- `POST /api/v1/storefront/auth/register` and `login`: separate customer accounts and scoped 30-day Sanctum tokens, not CRM users.
+- `GET /api/v1/storefront/auth/me` and `POST /logout`.
+- Authenticated customer address CRUD, wishlist CRUD and delivered-purchase review submission awaiting CRM moderation.
+- `GET /api/v1/storefront/orders` and `GET /api/v1/storefront/orders/{orderNumber}`: customer-owned orders only; shipment tracking details.
+- `POST /api/v1/storefront/checkout`: **production-only** with independent disabled-by-default release gate, server-calculated price/shipping/approved tax, atomic idempotent order + inventory reservation + provider reservation, payment initiation, duplicate replay behavior and fail-closed uncertain-provider status.
+- `POST /api/v1/storefront/payments/myfatoorah/live-webhook/{marketCode}`: HMAC Webhook V2, provider GET enquiry, invoice/payment ID/order/currency/amount verification, durable receipts, atomic idempotent settlement. Supported market codes: EG, AE, SA.
+- Existing MyFatoorah sandbox-only endpoints remain separate and local-only.
+- Order cancellation prevents stock release while a MyFatoorah payment is pending, initiated or uncertain.
+- Configured shipping order totals use inclusive/exclusive market tax without double charging inclusive amounts.
+- CRM refunds: pending request can be rejected by approver or cancelled by original requester with audit log; neither triggers an external refund.
+- CRM ingredients and ritual quiz questions/options can be non-destructively archived.
+- Finance list has validated `per_page` (max 100) and meta pagination.
+- Finance/Super Admin permission migration grants finance.view/manage, refunds.approve, tax.approve. Assign actual Finance personnel separately.
+- Canonical `docs/openapi.json` updated; YAML deprecated.
 
-- Added regional MyFatoorah V3 live API client `MyFatoorahLiveClient` for EG/AE/SA with explicit config gate and market-specific server credentials. It is **not wired to public routes**. Enabling the client alone is insufficient for accepting payments.
-- Quote now offers `estimated_total` only when a tax amount is available, and explicitly distinguishes inclusive vs exclusive tax. Quote remains provisional.
-- Configured shipping order service was corrected to avoid adding inclusive tax twice in `grand_total`. Regression tests and integration tests are mandatory before release.
-- Added market-tax calculation tests for inclusive/exclusive and shipping-tax policy, plus live client safety tests. These are committed but must be run locally.
-- No production checkout or payment-capture route was added. Existing sandbox behavior remains isolated.
+## Critical release blockers — NOT verified or cannot be done without operator setup
 
-## Phase 2: not production-ready — mandatory remaining work
+1. **All new migrations must be applied** on a backed-up MySQL development/staging database. Do not run `migrate:fresh` against existing data.
+2. **Run complete tests and resolve failures.** Before this batch, 10 tests / 33 assertions passed locally. New account, catalog, checkout and webhook tests were subsequently committed but their results are not yet known. The CI workflow lints PHP and runs all tests.
+3. **Configure actual shipping prices/cities and tax rules for Egypt, UAE and Saudi Arabia** in CRM, approve tax using a separate Finance/Admin user, verify correct tax-inclusive/exclusive business treatment. No fees or tax percentages are invented.
+4. **Activate MyFatoorah merchant account(s)** and confirm supported currencies/payment methods, country routing, payout/refund procedures and live API access.
+5. **Register HTTPS redirect and signed webhook V2 endpoints** with market-specific secrets. Validate real provider test vectors, accepted webhook retries and 200/202 behavior.
+6. **Perform genuine provider sandbox end-to-end QA** (success, failed card, abandoned session, timeout, duplicate and reordered webhook, payment after manual cancellation request, concurrency, inventory rollback/reconciliation). Current production route is intentionally not usable in local/testing.
+7. **Operational reconciliation and customer support** for uncertain provider initiation, stale/unpaid reservations, returns/refunds and stock release must be signed off. No automated reconciliation job or actual provider refund API has been released by this work.
+8. **Frontends must integrate new APIs and error codes** and test against the correct CORS origins. This branch is the backend repository; Dashboard and Storefront frontends are separate.
+9. **Security review** (access controls, rate limits, logging, webhook replay, credential rotation, database backups), deployment, monitoring and rollback plan are still required.
 
-**Do not activate real checkout or accept payments yet.**
+## Private environment settings (do not commit values)
 
-1. Design and implement `POST /api/v1/storefront/checkout` with authenticated or securely owned guest order, strict server-side price and stock calculation, idempotency and atomic stock reservation, no user-supplied amounts, and recovery from interrupted payment initiation.
-2. Finalize the payable policy after regression testing the implemented inclusive/exclusive distinction, shipping, fees and discounts. Confirm rounding, country/currency, and MyFatoorah account support for EG/AE/SA. Current `MarketTaxQuoteService` returns `is_final_payable_total=false` even when tax is approved; do not bypass this.
-3. Add country-specific live MyFatoorah v3 API adapters. The existing `MyFatoorahV3Client` and webhook implementation are *sandbox-only* and must not be exposed as live routes.
-4. Process signed provider webhook V2 with authentic signature validation, idempotent event receipt, provider-side GET payment verification, stored order/invoice/amount/currency checks and atomic payment/stock state transitions. Never mark an order paid solely on browser redirect.
-5. Implement an authenticated customer-account or verified guest ownership model before `GET /storefront/orders` and get-by-order-number. Public order-number-only lookup is not safe.
-6. Handle expiration, failure, refund, cancellation and stock release under repeated/reordered webhooks. Add automated concurrency and retry tests.
-7. Publish OpenAPI contracts and run Laravel feature/integration tests against MySQL and the sandbox. Obtain live provider keys, HTTPS callback/redirect, registered webhook, deployment environment settings and operator approval before a real transaction.
-
-## Suggested QA
-
-```bash
-php artisan optimize:clear
-php artisan route:list --path=api/v1/storefront
-php artisan test
-curl -H "Accept: application/json" "http://127.0.0.1:8000/api/v1/storefront/markets"
-curl -H "Accept: application/json" "http://127.0.0.1:8000/api/v1/storefront/settings"
-curl -H "Accept: application/json" "http://127.0.0.1:8000/api/v1/storefront/shipping/destinations?market_id=1"
-curl -H "Accept: application/json" "http://127.0.0.1:8000/api/v1/storefront/products?market_id=1&sort=price_asc"
+```dotenv
+APP_ENV=production
+APP_KEY=base64:YOUR_GENERATED_KEY
+APP_URL=https://your-api-host.example
+CORS_ALLOWED_ORIGINS=https://your-customer-store.example,https://your-admin-dashboard.example
+COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED=false
+COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED=false
+MYFATOORAH_LIVE_ENABLED=false
+MYFATOORAH_LIVE_TOKEN_EG=
+MYFATOORAH_LIVE_TOKEN_AE=
+MYFATOORAH_LIVE_TOKEN_SA=
+MYFATOORAH_WEBHOOK_SECRET_EG=
+MYFATOORAH_WEBHOOK_SECRET_AE=
+MYFATOORAH_WEBHOOK_SECRET_SA=
+MYFATOORAH_LIVE_REDIRECT_URL=https://your-customer-store.example/payment-result
+CRM_PASSWORD_RESET_FRONTEND_URL=https://your-admin-dashboard.example/reset-password
 ```
 
-Run requests with valid seeded market IDs. Verify no production checkout/payment endpoint is enabled until all gates pass.
+**Keep all three release flags false** until QA, provider onboarding and operational approval are complete.
 
-## Updated local QA commands (after pull)
+## Local commands
 
 ```bat
+git switch feature/storefront-phase1-phase2-20261118
 git pull --ff-only
+composer install
 php artisan optimize:clear
-php artisan test --filter=StorefrontBootstrapTest
-php artisan test --filter=MarketTaxCalculationTest
-php artisan test --filter=MyFatoorahLiveClientSafetyTest
+php artisan migrate:status
 php artisan test
+php artisan route:list --path=api/v1/storefront
+php scripts/local_openapi_full_coverage.php
 ```
 
-Do not run `migrate:fresh` on the existing development MySQL database.
-The SQLite `:memory:` PHPUnit configuration is isolated from the developer's MySQL data.
+After reviewing migration files and creating a database backup, run `php artisan migrate` on the intended environment. PHPUnit uses isolated SQLite in-memory tests and fake provider HTTP responses. The code is **not production-ready merely because unit/feature tests pass**.
