@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\V1\StorefrontWishlistController;
 use App\Http\Controllers\Api\V1\StorefrontReviewSubmissionController;
 use App\Http\Controllers\Api\V1\StorefrontProductionCheckoutController;
 use App\Http\Controllers\Api\V1\StorefrontLiveMyFatoorahWebhookController;
+use App\Http\Controllers\Api\V1\StorefrontSandboxCheckoutController;
+use App\Http\Controllers\Api\V1\StorefrontSandboxMyFatoorahWebhookController;
 use App\Http\Controllers\Api\V1\IngredientController;
 use App\Http\Controllers\Api\V1\RitualQuizController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\Api\V1\LocalMyFatoorahReservationStatusController;
 use App\Http\Controllers\Api\V1\LocalMyFatoorahProviderEnquiryController;
 
 Route::prefix('v1')->group(function () {
+    Route::post('/storefront/payments/myfatoorah/sandbox-webhook', StorefrontSandboxMyFatoorahWebhookController::class)->middleware('throttle:storefront-quote');
     Route::post('/storefront/payments/myfatoorah/live-webhook/{marketCode}', StorefrontLiveMyFatoorahWebhookController::class)->where('marketCode', 'EG|AE|SA')->middleware('throttle:storefront-quote');
     Route::post('/storefront/auth/register', [StorefrontAccountController::class, 'register'])->middleware('throttle:login');
     Route::post('/storefront/auth/login', [StorefrontAccountController::class, 'login'])->middleware('throttle:login');
@@ -49,6 +52,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/storefront/auth/me', [StorefrontAccountController::class, 'updateProfile'])->middleware('throttle:login');
         Route::post('/storefront/auth/change-password', [StorefrontAccountController::class, 'changePassword'])->middleware('throttle:login');
         Route::post('/storefront/auth/logout', [StorefrontAccountController::class, 'logout']);
+        Route::post('/storefront/checkout/sandbox', StorefrontSandboxCheckoutController::class)->middleware('throttle:storefront-test-order');
         Route::post('/storefront/checkout', StorefrontProductionCheckoutController::class)->middleware('throttle:storefront-test-order');
         Route::get('/storefront/orders', [StorefrontCustomerOrdersController::class, 'index']);
         Route::get('/storefront/wishlist', [StorefrontWishlistController::class, 'index']);
