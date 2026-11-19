@@ -97,7 +97,12 @@ class PublicCheckoutQuoteController extends Controller
             ];
         }
 
-        $discount = app(\App\Services\CouponService::class)->discount($data['coupon_code'] ?? null, $subtotal);
+        $viewer = $request->user('sanctum');
+        $customerId = $viewer instanceof \App\Models\StorefrontAccount && $viewer->tokenCan('storefront')
+            ? $viewer->customer_id : null;
+        $discount = app(\App\Services\CouponService::class)->discount(
+            $data['coupon_code'] ?? null, $subtotal, $customerId, false, (int)$market->id
+        );
         $netSubtotal = max(0, round($subtotal - $discount, 4));
         $shippingQuote = $shipping->quote(
             $market,
