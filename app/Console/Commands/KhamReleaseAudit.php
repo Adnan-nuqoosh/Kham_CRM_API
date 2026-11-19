@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Schema;
 /** Read-only deploy preflight. Never enables payments or prints secrets. */
 final class KhamReleaseAudit extends Command
 {
-    protected $signature = 'kham:release-audit\n        {--strict : Exit failure if any prerequisite is unmet}\n        {--launch-ready : Read-only check of conditions required to activate production payments}';
+    protected $signature = 'kham:release-audit
+        {--strict : Exit failure if any prerequisite is unmet}
+        {--launch-ready : Read-only check of conditions required to activate production payments}';
     protected $description = 'Read-only PHP, TLS, DB, shipping, tax, payment and security deployment audit';
 
     public function handle(): int
