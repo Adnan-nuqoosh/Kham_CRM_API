@@ -26,11 +26,11 @@ This checklist tracks the two frontend-team change request documents against the
 ## Intentionally not enabled automatically
 
 - **Storefront coupons:** No coupon acceptance in live public quote/production checkout. Enable only after coupon eligibility, redemption limits, idempotency, taxes, usage rollback, and price parity tests. Do not merely remove `prohibited` validation or flip `coupons_enabled`.
-- **Public guest order lookup:** Keep account-only order access unless a privacy-reviewed guest flow is approved.
+- **Public guest order lookup:** Not applicable to current authenticated-only production checkout; no unauthenticated order lookup is added, to avoid disclosing customer orders. A future guest-checkout product decision must precede designing a rate-limited proof-of-ownership lookup.
 - **MyFatoorah/live checkout:** Keep `COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED=false`, `MYFATOORAH_LIVE_ENABLED=false`, and `COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED=false` until market readiness, verified merchant/webhooks and tax/shipping approval. Keep test checkout local-only and isolated from production data.
-- Existing legacy `docs/KHAM_Commerce_API_OpenAPI.yaml` should be deprecated in favor of `docs/openapi.json` for clients; do not treat older YAML schemas as authoritative.
+- Legacy `docs/KHAM_Commerce_API_OpenAPI.yaml` now carries an explicit deprecation header. `docs/openapi.json` is authoritative.
 - Frontend dashboard refunds UI, storefront customer account pages, market selection consuming `/storefront/markets`, and secure isolated staging checkout connection require **frontend repo changes**, not this backend branch.
-- Full catalogs, Arabic fields, quiz archive semantics, detailed error codes, finance/returns/tax enums and sandbox operator config should be checked against the authoritative OpenAPI before calling the entire documentation request complete.
+- Product catalog filters, Arabic field schemas, finance pagination, tax/shipping descriptions and storefront account contracts are updated in `docs/openapi.json`; see `docs/CHANGE_REQUEST_OPERATOR_GUIDE_20261119.md` for RBAC, refunds, sandbox requirements and error contract. Ingredient/quiz archive semantics documentation is **explicitly excluded at the requester's direction**.
 
 ## Release / verification checklist
 
@@ -43,4 +43,4 @@ This checklist tracks the two frontend-team change request documents against the
 
 ## Status
 
-This branch implements customer profile/password changes, isolated reset infrastructure, seeder parity and API contracts. The two documents **are not yet 100% completed**: frontend changes, real staging tests, live environment setup, storefront coupons, optional guest lookup and production launch gates remain explicitly open.
+This branch implements customer profile/password changes, isolated reset infrastructure, seeder parity, OpenAPI catalog/finance/bilingual corrections and detailed operator docs. Archive semantics are skipped as requested; legacy frontend market IDs are outside backend scope. **Still pending**: frontend UI changes, live environment/SMTP setup, staging end-to-end verification, safe coupon redemption support, and payment/shipping/tax production launch gates. Guest order lookup is not applicable to the current authenticated-only production checkout.
