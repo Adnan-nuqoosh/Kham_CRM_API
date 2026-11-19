@@ -44,7 +44,7 @@ class OrderService {
     $qty=(int)$item['quantity'];$line=(float)$price->price*$qty;
     $subtotal+=$line;$lines[]=compact('variant','qty','price','line');
    }
-   $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal,$payload['customer_id']??null,true);
+   $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal,$payload['customer_id']??null,true,(int)$payload['market_id']);
    $mode=$payload['shipping_mode']??'manual';
    $shippingRuleId=null;
    $taxMethod='exclusive';
