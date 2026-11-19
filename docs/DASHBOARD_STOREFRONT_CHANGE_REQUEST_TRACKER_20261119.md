@@ -38,6 +38,18 @@ This checklist tracks the two frontend-team change request documents against the
 - Added `tests/Feature/LocalMockOrderCrmFlowTest.php` to verify creation of the mock order, a pending mock payment, one and only one order after the same idempotency key is retried, correct stock reservation, and visibility through the authenticated `GET /api/v1/orders` CRM endpoint. The disabled-route behavior is also covered.
 - This is automated **isolated test DB** coverage, not evidence that `staging.khambeauty.com` currently reaches `127.0.0.1:8101` or displays the order. A secure Next.js server-side proxy and frontend/order dashboard integration must still be deployed and verified separately.
 
+## GitHub-only staging frontend handoff
+
+The KHAM Next.js storefront's actual GitHub repository is **not among the accessible repositories** of the linked GitHub account. The available `CRM_front_end-` repository is for Nuqoosh CRM, **not KHAM**, so it must not be modified.
+
+This branch now includes a copy-only integration handoff under `integrations/nextjs-staging-checkout/`:
+
+- `route.ts`: a server-side, mock-only Next.js `/api/test-checkout` route that forwards to the isolated loopback staging API, rejects invalid origin/host/secret, and fails closed when no secret is set.
+- `storefront-test-checkout.ts`: a typed frontend helper for submitting the test order with a server-only access key supplied by an authorized QA operator.
+- `README.md`: exact copy targets, separate production/staging boundaries, build prerequisites, checkout response handling, idempotent retry and CRM verification.
+
+**This does not wire the existing website checkout button.** The templates must be moved to the real KHAM Next.js repository and integrated with the actual checkout UI before `git pull` on that frontend repo can deploy them.
+
 ## Release / verification checklist
 
 1. Review the PR and run `php -l` on changed PHP files, `composer test` / `php artisan test` with an **isolated test DB**. Do not run against any live DB.
