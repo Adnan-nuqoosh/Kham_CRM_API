@@ -16,7 +16,7 @@ final class MyFatoorahV3Client
 
     private function token(): string
     {
-        if (!app()->environment('local', 'testing')
+        if (!app()->environment('local', 'testing', 'staging')
             || !config('commerce.myfatoorah_sandbox_enabled', false)) {
             throw new RuntimeException('MyFatoorah sandbox client is disabled.');
         }
