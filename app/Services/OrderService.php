@@ -75,14 +75,27 @@ class OrderService {
     $shipping=(float)$quote['shipping_total'];
     $shippingRuleId=$quote['rule_id'];
     $taxPreview=$this->marketTaxes->preview($market,number_format(max(0,round($subtotal-$discount,4)),4,'.',''),number_format($shipping,4,'.',''));
-    if ($taxPreview['tax_status'] !== 'approved_not_enabled' || $taxPreview['tax_total'] === null) {
-     throw ValidationException::withMessages(['tax_total'=>['Market tax policy must be explicitly approved before configured checkout.']]);
+    // Local mock checkout is not a payable commercial transaction.
+    // Only explicitly enabled APP_ENV=local QA can bypass tax approval.
+    $isLocalMock=$allowLocalTestConfiguredShipping
+        && app()->environment('local')
+        && config('commerce.storefront_test_checkout_enabled',false);
+    if ($isLocalMock) {
+     if ($tax !== 0.0) {
+      throw ValidationException::withMessages(['tax_total'=>['Local mock checkout must use zero tax.']]);
+     }
+     $tax=0.0;
+     $taxMethod='exclusive';
+    } else {
+     if ($taxPreview['tax_status'] !== 'approved_not_enabled' || $taxPreview['tax_total'] === null) {
+      throw ValidationException::withMessages(['tax_total'=>['Market tax policy must be explicitly approved before configured checkout.']]);
+     }
+     if (abs($tax-(float)$taxPreview['tax_total'])>0.00001) {
+      throw ValidationException::withMessages(['tax_total'=>['Submitted tax does not match the server-calculated approved tax.']]);
+     }
+     $tax=(float)$taxPreview['tax_total'];
+     $taxMethod=$taxPreview['tax_calculation_method'] ?? 'exclusive';
     }
-    if (abs($tax-(float)$taxPreview['tax_total'])>0.00001) {
-     throw ValidationException::withMessages(['tax_total'=>['Submitted tax does not match the server-calculated approved tax.']]);
-    }
-    $tax=(float)$taxPreview['tax_total'];
-    $taxMethod=$taxPreview['tax_calculation_method'] ?? 'exclusive';
    }
    $order=Order::create(['order_number'=>$this->nextNumber(),'customer_id'=>$payload['customer_id']??null,'market_id'=>$payload['market_id'],'warehouse_id'=>$warehouseId,'currency_code'=>$lines[0]['price']->currency->code??$lines[0]['price']->currency_id,'status'=>OrderStatus::Pending,'payment_status'=>PaymentStatus::Pending,'fulfillment_status'=>'unfulfilled','subtotal'=>$subtotal,'discount_total'=>$discount,'shipping_total'=>$shipping,'shipping_mode'=>$mode,'shipping_rule_id'=>$shippingRuleId,'tax_total'=>$tax,'grand_total'=>max(0,$subtotal-$discount+$shipping+($taxMethod==='exclusive' ? $tax : 0)),'coupon_code'=>$payload['coupon_code']??null,'notes'=>$payload['notes']??null,'placed_at'=>now()]);
    if (!empty($payload['coupon_code']) && $discount > 0) {
