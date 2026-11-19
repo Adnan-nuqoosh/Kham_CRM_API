@@ -37,7 +37,7 @@ Use a separate staging database, test products/stock and a non-production mercha
 - Customer register/login and auth token isolation; profile edit, password change, forgot/reset (real mailbox)
 - Country/market selection and correct EGP/AED/SAR pricing and destination policy
 - Public quote, coupon eligibility (if enabled), discounts, tax, shipping and immutable server pricing
-- Test checkout creates exactly one order, pending mock payment and stock reservation; CRM `GET /api/v1/orders?search=...` shows that order
+- Test checkout (with an explicitly approved 0% staging tax rule) creates exactly one order, pending mock payment and stock reservation; CRM `GET /api/v1/orders?search=...` shows that order
 - Reused idempotency key returns the original order/payment session; changed payload with same key rejects
 - Provider success: verify signed event **and** matching provider enquiry, then update payment once
 - Provider failure, timeout/unknown, repeated or invalid webhooks leave order/payment safely pending; resolve via read-only reconciliation report
