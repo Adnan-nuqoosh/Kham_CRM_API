@@ -8,6 +8,7 @@ use App\Models\StorefrontAccount;
 use App\Support\ApiResponse;
 use App\Support\PaginationMeta;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 final class StorefrontCustomerOrdersController extends Controller
 {
@@ -34,7 +35,27 @@ final class StorefrontCustomerOrdersController extends Controller
         $order=Order::query()->where('customer_id',$customerId)
             ->where('order_number',$orderNumber)
             ->with(['items','addresses','shipments'])->firstOrFail();
+        $reservation=DB::table('myfatoorah_checkout_reservations')
+            ->where('order_id',$order->id)->first(['status','payment_url']);
+        $pending=$order->payment_status->value==='pending';
+        $initiated=$pending && $reservation && $reservation->status==='initiated';
+        $url=$initiated ? (string)($reservation->payment_url??'') : '';
+        $resumable=$url!=='' && filter_var($url,FILTER_VALIDATE_URL)
+            && parse_url($url,PHP_URL_SCHEME)==='https';
+        // A checkout error or lost redirect must never cause a fresh payment
+        // initiation for an existing order. Only verified provider settlement
+        // changes payment status. Keep unknown sessions pending for operator review.
+        $paymentRecovery=[
+            'payment_status'=>$order->payment_status->value,
+            'initiation_status'=>$reservation?->status,
+            'can_resume_payment'=>(bool)$resumable,
+            'payment_url'=>$resumable ? $url : null,
+            'requires_reconciliation'=>$pending && $reservation
+                && in_array($reservation->status,['reserved','requesting','uncertain'],true),
+        ];
+
         return ApiResponse::success([
+            'payment_recovery'=>$paymentRecovery,
             'order_number'=>$order->order_number,
             'status'=>$order->status,
             'payment_status'=>$order->payment_status,
