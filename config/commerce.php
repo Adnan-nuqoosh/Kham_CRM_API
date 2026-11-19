@@ -17,6 +17,8 @@ return [
     'configured_shipping_orders_enabled' => env('COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED', false),
     // Never enables production checkout. Local mock flow only; no real payment.
     'storefront_test_checkout_enabled' => env('COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED', false),
+    // Explicit storefront coupon gate. Leave off until isolated parity tests and launch approval.
+    'storefront_coupons_enabled' => env('COMMERCE_STOREFRONT_COUPONS_ENABLED', false),
     // Independent release gate: defaults off even when provider credentials exist.
     'storefront_production_checkout_enabled' => env('COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED', false),
     'myfatoorah_live_redirect_url' => env('MYFATOORAH_LIVE_REDIRECT_URL'),
