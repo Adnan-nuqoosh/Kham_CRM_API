@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Market;
 use App\Models\ShippingRule;
 use App\Services\StorefrontCheckoutReadiness;
+use App\Services\StorefrontSandboxCheckoutReadiness;
 use Illuminate\Support\Facades\Schema;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,11 @@ final class PublicStorefrontBootstrapController extends Controller
             'is_final_payable_total' => false,
         ];
 
+        $sandbox = $market ? app(StorefrontSandboxCheckoutReadiness::class)->forMarket($market) : [
+            'ready'=>false, 'blockers'=>['MARKET_UNAVAILABLE'], 'tax_status'=>'market_unavailable',
+            'is_final_payable_total'=>false,
+        ];
+
         return ApiResponse::success([
             'default_market_id' => $defaultMarket?->id,
             'default_market_code' => $defaultMarket?->code,
@@ -65,11 +71,19 @@ final class PublicStorefrontBootstrapController extends Controller
             'currency_code' => $market?->currency?->code,
             'features' => [
                 'production_checkout_enabled' => $ready['ready'],
+                'sandbox_checkout_enabled' => $sandbox['ready'],
                 'customer_accounts_enabled' => Schema::hasTable('storefront_accounts'),
                 'wishlist_enabled' => Schema::hasTable('storefront_wishlists'),
                 'coupons_enabled' => (bool) config('commerce.storefront_coupons_enabled', false),
                 'local_mock_checkout' => app()->environment('local')
                     && (bool) config('commerce.storefront_test_checkout_enabled', false),
+            ],
+            'sandbox_checkout' => [
+                'ready' => $sandbox['ready'],
+                'reason_code' => $sandbox['blockers'][0] ?? null,
+                'blockers' => $sandbox['blockers'],
+                'tax_status' => $sandbox['tax_status'],
+                'is_final_payable_total' => $sandbox['is_final_payable_total'],
             ],
             'checkout' => [
                 'ready' => $ready['ready'],

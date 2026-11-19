@@ -120,3 +120,30 @@ A Composer audit originally found 10 dependency advisories affecting 6 packages.
 The one-time workflow which had temporary branch write permission was removed after `composer.lock` was updated. Regular CI continues to enforce Composer audit on every push and PR.
 
 Actual provider payment, approved market shipping/tax policy, external security penetration test, staging load test and real server rollout are still unverified. Keep live release flags off until those operational gates are satisfied.
+
+## Storefront shopper sandbox hosted checkout (PR #9)
+
+Separate from CRM sandbox hosted checkout and from production-only `POST /api/v1/storefront/checkout`. Shopper access requires a customer Sanctum token with the `storefront` ability. Never expose the MyFatoorah sandbox token to the browser.
+
+- `POST /api/v1/storefront/checkout/sandbox`: accepts exactly the same server-priced checkout payload as production checkout; returns `STOREFRONT_SANDBOX_CHECKOUT_CREATED` with a hosted sandbox `payment_url` and pending `payment_status`. Reusing the same idempotency key is safe; an uncertain provider outcome must not be retried using a fresh key.
+- `GET /api/v1/storefront/settings?market_id=N`: `data.features.sandbox_checkout_enabled` and `data.sandbox_checkout.{ready,reason_code,blockers,tax_status,is_final_payable_total}` are for the **selected market** and are separate from live checkout readiness.
+- `POST /api/v1/storefront/payments/myfatoorah/sandbox-webhook`: signed provider-only callback (no customer authentication); verifies signature, stored sandbox reservation, provider payment enquiry, invoice, order, amount and currency before exactly-once settlement. Must be configured at a public HTTPS staging URL in MyFatoorah demo portal, not localhost.
+
+In **isolated local or staging only** (never enable sandbox flags in production):
+
+```dotenv
+APP_ENV=staging
+COMMERCE_STOREFRONT_SANDBOX_CHECKOUT_ENABLED=true
+MYFATOORAH_SANDBOX_ENABLED=true
+MYFATOORAH_SANDBOX_WEBHOOK_ENABLED=true
+MYFATOORAH_SANDBOX_TOKEN=<private-demo-credential>
+MYFATOORAH_WEBHOOK_SECRET=<private-demo-v2-secret>
+MYFATOORAH_SANDBOX_REDIRECT_URL=https://your-isolated-staging-domain.example/payment-result
+COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED=true
+MYFATOORAH_LIVE_ENABLED=false
+COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED=false
+```
+
+Use an independent staging DB, explicit finance-approved test tax policy, market shipping rules, available inventory and a valid demo merchant account. On local XAMPP without a public HTTPS callback, leave sandbox flags OFF and use automated mocked-provider tests instead. The storefront sandbox checkout is never available in production even if a flag is accidentally set. The server's `APP_ENV` must reflect the deployment; never mislabel production as staging to bypass a gate. 
+
+This is an API implementation and CI test, **not** evidence of a real merchant sandbox transaction, externally delivered webhook or deployed Next.js checkout page.

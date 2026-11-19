@@ -7683,6 +7683,87 @@
           }
         }
       }
+    },
+    "/api/v1/storefront/checkout/sandbox": {
+      "post": {
+        "summary": "Authenticated sandbox storefront checkout on local/testing/staging only; disabled by default, never live",
+        "tags": [
+          "Storefront"
+        ],
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; standard ApiSuccess envelope"
+          },
+          "201": {
+            "description": "Order reserved and provider hosted payment started"
+          },
+          "202": {
+            "description": "Previously initiated checkout requires reconciliation"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Forbidden for this customer"
+          },
+          "404": {
+            "description": "Sandbox checkout intentionally disabled in this environment"
+          },
+          "422": {
+            "description": "Validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "Feature unavailable or provider requires reconciliation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorefrontCheckoutInput"
+              }
+            }
+          }
+        },
+        "description": "Requires storefront Sanctum token, explicit sandbox feature gates and approved market tax/shipping. Creates a server-priced order and hosted MyFatoorah test payment URL. Same idempotency key returns existing session, unresolved state requires operator reconciliation. Merchant sandbox token is private. Never use as live payment."
+      }
+    },
+    "/api/v1/storefront/payments/myfatoorah/sandbox-webhook": {
+      "post": {
+        "operationId": "post_storefront_payments_myfatoorah_local_webhook",
+        "tags": [
+          "Sandbox Payments"
+        ],
+        "summary": "Signed MyFatoorah V2 callback for customer sandbox hosted checkout on local/testing/staging",
+        "description": "Provider callback only; no shopper authentication. Disabled by default and always disabled on production. MyFatoorah-Signature must verify; provider enquiry must match sandbox payment invoice, amount, currency and order. Only previously initiated storefront sandbox reservations settle once.",
+        "responses": {
+          "200": {
+            "description": "SANDBOX_PAYMENT_VERIFIED"
+          },
+          "202": {
+            "description": "PAYMENT_NOT_CONFIRMED"
+          },
+          "400": {
+            "description": "INVALID_WEBHOOK_BODY; invalid JSON or payload exceeds 64 KiB"
+          },
+          "404": {
+            "description": "Sandbox callback disabled in this environment"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        },
+        "security": []
+      }
     }
   },
   "components": {
