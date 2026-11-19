@@ -16,7 +16,7 @@ final class MyFatoorahSandboxSettlementService
 {
     public function apply(int $orderId, array $signedEvent, array $verified): array
     {
-        if (!app()->environment('local', 'testing')
+        if (!app()->environment('local', 'testing', 'staging')
             || !config('commerce.myfatoorah_sandbox_enabled', false)) {
             throw ValidationException::withMessages([
                 'payment' => ['Sandbox settlement is disabled.'],
