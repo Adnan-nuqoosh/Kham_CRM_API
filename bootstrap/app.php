@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
 
-    ->withMiddleware(function (Middleware $middleware): void {
+    ->withCommands([\n        \\App\\Console\\Commands\\KhamReleaseAudit::class,\n        \\App\\Console\\Commands\\KhamPaymentReconciliationReport::class,\n        \\App\\Console\\Commands\\MyFatoorahSandboxCheck::class,\n    ])\n    ->withMiddleware(function (Middleware $middleware): void {
         /*
         |--------------------------------------------------------------------------
         | API-Only Authentication Behaviour
