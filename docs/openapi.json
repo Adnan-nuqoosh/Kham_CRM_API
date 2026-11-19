@@ -1426,9 +1426,15 @@
                         "maxLength": 120
                       }
                     }
+                  },
+                  "coupon_code": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "nullable": true,
+                    "description": "Optional ONLY when COMMERCE_STOREFRONT_COUPONS_ENABLED=true. For per-customer caps, send a valid storefront Bearer token; fixed-value codes require rules.market_ids with exactly one market. Otherwise 422."
                   }
                 },
-                "description": "Client unit_price and coupon_code are prohibited; stock and prices are server verified."
+                "description": "Unit prices cannot be client-supplied; coupons default OFF and return 422 unless enabled by release-specific feature flag. A quote is non-binding."
               }
             }
           }
@@ -1510,7 +1516,7 @@
             "$ref": "#/components/responses/ValidationError"
           }
         },
-        "description": " Public quote rejects coupon_code and client prices. When release gates pass, final_payable_total is shown. Every checkout re-prices on the server.",
+        "description": "Quotes and live checkout both use server-side coupon validation, net subtotal and tax/shipping parity when the explicitly OFF-by-default coupon flag is enabled. Redemption occurs atomically only on order creation; quoted limits may change before checkout.",
         "x-response-fields": [
           "tax_status",
           "tax_total",
@@ -6682,7 +6688,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success; standard ApiSuccess envelope"
+            "description": "STOREFRONT_SETTINGS; data.features.coupons_enabled reflects COMMERCE_STOREFRONT_COUPONS_ENABLED (default false)."
           }
         }
       }
@@ -7338,7 +7344,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Authenticated only. Server reprices products, applies validated and enabled coupon (when supplied), then independently recalculates shipping/tax from discounted subtotal. Disabled until all payment/tax/shipping readiness gates pass."
       }
     },
     "/api/v1/storefront/payments/myfatoorah/live-webhook/{marketCode}": {
@@ -8115,6 +8122,12 @@
           },
           "shipping_address": {
             "$ref": "#/components/schemas/StorefrontShippingAddressInput"
+          },
+          "coupon_code": {
+            "type": "string",
+            "maxLength": 80,
+            "nullable": true,
+            "description": "Optional only when COMMERCE_STOREFRONT_COUPONS_ENABLED=true. Otherwise prohibited. Redemption enforced atomically on order creation and bounded by configured market/usage restrictions."
           }
         }
       },
