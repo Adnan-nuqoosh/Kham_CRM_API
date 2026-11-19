@@ -56,7 +56,7 @@ These are route permissions rather than a guarantee about the names of staff rol
 ## Staging MyFatoorah test-only routes
 
 - `APP_ENV=local` and `COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED=true` are required for local mock guest checkout; **never configure `APP_ENV=local` on the public production CRM**.
-- Mock checkout `POST /api/v1/storefront/checkout/test-order` requires a unique `idempotency_key` (16–128 allowed characters), valid market, variant quantities, customer/contact details, shipping address, and `payment_method=mock_fatoora`. It reserves **real staging stock** and creates staging orders: use an isolated staging DB and secure local network access only.
+- Mock checkout `POST /api/v1/storefront/checkout/test-order` requires a unique `idempotency_key` (16–128 allowed characters), valid market, variant quantities, customer/contact details, shipping address, and `payment_method=mock_fatoora`. It reserves **real staging stock** and creates staging orders: use an isolated staging DB, an approved **0% staging market tax rule** for mock QA and secure local network access only.
 - Sandbox hosted payment operations require `APP_ENV=local/testing` and the appropriate `MYFATOORAH_SANDBOX_ENABLED`, `MYFATOORAH_SANDBOX_HOSTED_CHECKOUT_ENABLED`, token and `MYFATOORAH_SANDBOX_REDIRECT_URL` (HTTPS) config. Webhook simulation has its own opt-in flag and secret. Provider timeout is an *uncertain* state, never a reason for blind automatic resubmission.
 - Real checkout remains OFF unless `COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED`, `MYFATOORAH_LIVE_ENABLED`, `COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED`, merchant tokens/webhook secrets, HTTPS redirect, approved tax policy and active market shipping have all passed market-specific release audit.
 
