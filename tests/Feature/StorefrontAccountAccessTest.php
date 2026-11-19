@@ -81,6 +81,61 @@ final class StorefrontAccountAccessTest extends TestCase
             ->assertOk()->assertJsonPath('data.order_number',$order->order_number);
     }
 
+    public function test_owner_can_resume_only_pending_initiated_hosted_checkout(): void
+    {
+        $owner=$this->account('payment-owner@example.test');
+        $stranger=$this->account('payment-stranger@example.test');
+        $currency=\\App\\Models\\Currency::create([
+            'code'=>'EGP','name'=>'Egyptian Pound','symbol'=>'EGP',
+            'decimal_places'=>2,'rate_to_base'=>1,'is_base'=>true,'is_active'=>true,
+        ]);
+        $market=\\App\\Models\\Market::create([
+            'code'=>'EG','name'=>'Egypt','country_code'=>'EG','currency_id'=>$currency->id,
+            'timezone'=>'Africa/Cairo','is_default'=>true,'is_active'=>true,
+        ]);
+        $warehouse=\\App\\Models\\Warehouse::create([
+            'code'=>'EG-01','name'=>'Egypt','market_id'=>$market->id,'is_active'=>true,
+        ]);
+        $order=Order::create([
+            'order_number'=>'KH-2026-009900','customer_id'=>$owner->customer_id,
+            'market_id'=>$market->id,'warehouse_id'=>$warehouse->id,
+            'currency_code'=>'EGP','status'=>'pending','payment_status'=>'pending',
+            'fulfillment_status'=>'unfulfilled','subtotal'=>'100.0000',
+            'shipping_total'=>'0.0000','discount_total'=>'0.0000',
+            'tax_total'=>'0.0000','grand_total'=>'100.0000','placed_at'=>now(),
+        ]);
+        \\Illuminate\\Support\\Facades\\DB::table('myfatoorah_checkout_reservations')->insert([
+            'order_id'=>$order->id,
+            'idempotency_key_hash'=>hash('sha256','test-recovery-key'),
+            'status'=>'initiated','amount'=>'100.0000','currency_code'=>'EGP',
+            'payment_method'=>'CARD','invoice_id'=>'123456789',
+            'payment_url'=>'https://payment.example.test/hosted/123',
+            'created_at'=>now(),'updated_at'=>now(),
+        ]);
+
+        Sanctum::actingAs($stranger,['storefront']);
+        $this->getJson('/api/v1/storefront/orders/'.$order->order_number)->assertNotFound();
+
+        Sanctum::actingAs($owner,['storefront']);
+        $url='/api/v1/storefront/orders/'.$order->order_number;
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.payment_recovery.can_resume_payment',true)
+            ->assertJsonPath('data.payment_recovery.payment_url','https://payment.example.test/hosted/123')
+            ->assertJsonPath('data.payment_recovery.requires_reconciliation',false);
+
+        $order->update(['payment_status'=>'paid']);
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.payment_recovery.can_resume_payment',false)
+            ->assertJsonPath('data.payment_recovery.payment_url',null);
+
+        $order->update(['payment_status'=>'pending']);
+        \\Illuminate\\Support\\Facades\\DB::table('myfatoorah_checkout_reservations')
+            ->where('order_id',$order->id)->update(['status'=>'uncertain']);
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.payment_recovery.can_resume_payment',false)
+            ->assertJsonPath('data.payment_recovery.requires_reconciliation',true);
+    }
+
     public function test_crm_user_cannot_access_storefront_addresses(): void
     {
         $admin=User::create([
