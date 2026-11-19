@@ -36,7 +36,9 @@ return [
         'AE' => env('MYFATOORAH_LIVE_TOKEN_AE'),
         'SA' => env('MYFATOORAH_LIVE_TOKEN_SA'),
     ],
-    // Sandbox-only service; no checkout route or payment status mutation yet.
+    // Dedicated customer sandbox release gate (never enabled in production).
+    'storefront_sandbox_checkout_enabled' => env('COMMERCE_STOREFRONT_SANDBOX_CHECKOUT_ENABLED', false),
+    // Sandbox-only service; never use in production.
     'myfatoorah_sandbox_enabled' => env('MYFATOORAH_SANDBOX_ENABLED', false),
     'myfatoorah_sandbox_token' => env('MYFATOORAH_SANDBOX_TOKEN'),
     // CRM-only local/testing hosted initiation; requires server-controlled HTTPS redirect.
