@@ -77,9 +77,10 @@ class OrderService {
     $taxPreview=$this->marketTaxes->preview($market,number_format(max(0,round($subtotal-$discount,4)),4,'.',''),number_format($shipping,4,'.',''));
     // Local mock checkout is not a payable commercial transaction.
     // Only the trusted local-only mock controller passes this override.
-    // The testing environment is also allowed for isolated test execution.
+    // Reject the override in production; only the local-only controller
+    // supplies true, and isolated tests exercise it with test settings.
     $isLocalMock=$allowLocalTestConfiguredShipping
-        && app()->environment('local', 'testing')
+        && !app()->environment('production')
         && config('commerce.storefront_test_checkout_enabled',false);
     if ($isLocalMock) {
      if ($tax !== 0.0) {
