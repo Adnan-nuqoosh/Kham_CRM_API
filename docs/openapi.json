@@ -6906,6 +6906,61 @@
             "description": "Feature unavailable or provider requires reconciliation"
           }
         }
+      },
+      "patch": {
+        "operationId": "patch_storefront_auth_me",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Update authenticated customer profile (email changes not supported)",
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 100
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 30
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Wrong token scope"
+          },
+          "422": {
+            "description": "Field-level validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
       }
     },
     "/api/v1/storefront/auth/logout": {
@@ -7542,6 +7597,160 @@
           },
           "403": {
             "description": "products.manage required"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/change-password": {
+      "post": {
+        "operationId": "post_storefront_auth_change_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Change customer password, revoke other sessions",
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "current_password",
+                  "password",
+                  "password_confirmation"
+                ],
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "minLength": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Wrong token scope"
+          },
+          "422": {
+            "description": "Current password mismatch or validation errors"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/forgot-password": {
+      "post": {
+        "operationId": "post_storefront_auth_forgot_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Request storefront customer password reset link; generic response prevents account enumeration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "422": {
+            "description": "Invalid email format"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "HTTPS reset URL not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/reset-password": {
+      "post": {
+        "operationId": "post_storefront_auth_reset_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Reset storefront customer password using emailed token; revoke sessions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "token",
+                  "password",
+                  "password_confirmation"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "token": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "minLength": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "422": {
+            "description": "Invalid or expired token or validation errors"
+          },
+          "429": {
+            "description": "Rate limited"
           }
         }
       }
