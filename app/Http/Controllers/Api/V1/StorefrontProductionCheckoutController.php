@@ -57,7 +57,8 @@ final class StorefrontProductionCheckoutController extends Controller
             'shipping_address.state'=>['nullable','string','max:120'],
             'shipping_address.postal_code'=>['nullable','string','max:30'],
             'shipping_address.country_code'=>['required','string','size:2'],
-            'coupon_code'=>['prohibited'],
+            'coupon_code'=>config('commerce.storefront_coupons_enabled', false)
+                ? ['sometimes','nullable','string','max:80'] : ['prohibited'],
             'unit_price'=>['prohibited'], 'shipping_total'=>['prohibited'],
             'tax_total'=>['prohibited'],'customer_id'=>['prohibited'],
             'warehouse_id'=>['prohibited'],'payment_status'=>['prohibited'],
@@ -109,12 +110,16 @@ final class StorefrontProductionCheckoutController extends Controller
                 }
                 $subtotal+=(float)$price->price*(int)$item['quantity'];
             }
+            $discount=app(\App\Services\CouponService::class)->discount(
+                $data['coupon_code']??null,$subtotal,$account->customer_id
+            );
+            $netSubtotal=max(0,round($subtotal-$discount,4));
             $shipping=app(ShippingQuoteService::class)->quote(
                 $market,$data['shipping_address']['country_code'],
-                $data['shipping_address']['city'],$subtotal
+                $data['shipping_address']['city'],$netSubtotal
             );
             $tax=app(MarketTaxQuoteService::class)->preview(
-                $market,number_format($subtotal,4,'.',''),
+                $market,number_format($netSubtotal,4,'.',''),
                 (string)$shipping['shipping_total']
             );
             if (($tax['tax_status']??null)!=='approved_not_enabled' || $tax['tax_total']===null) {
@@ -127,6 +132,7 @@ final class StorefrontProductionCheckoutController extends Controller
                 'market_id'=>$market->id,
                 'customer_id'=>$account->customer_id,
                 'items'=>$data['items'],
+                'coupon_code'=>$data['coupon_code']??null,
                 'shipping_mode'=>'configured',
                 'tax_total'=>$tax['tax_total'],
                 'shipping_address'=>$address,
