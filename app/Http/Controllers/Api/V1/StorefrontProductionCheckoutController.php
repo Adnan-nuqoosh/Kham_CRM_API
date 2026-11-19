@@ -111,7 +111,7 @@ final class StorefrontProductionCheckoutController extends Controller
                 $subtotal+=(float)$price->price*(int)$item['quantity'];
             }
             $discount=app(\App\Services\CouponService::class)->discount(
-                $data['coupon_code']??null,$subtotal,$account->customer_id
+                $data['coupon_code']??null,$subtotal,$account->customer_id,false,(int)$market->id
             );
             $netSubtotal=max(0,round($subtotal-$discount,4));
             $shipping=app(ShippingQuoteService::class)->quote(
