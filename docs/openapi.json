@@ -6958,7 +6958,7 @@
     },
     "/api/v1/storefront/orders/{orderNumber}": {
       "get": {
-        "summary": "Fetch only an authenticated customer's own order by order number",
+        "summary": "Fetch authenticated customer's own order plus read-only payment recovery state",
         "tags": [
           "Storefront"
         ],
@@ -6969,7 +6969,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success; standard ApiSuccess envelope"
+            "description": "Own order detail including data.payment_recovery read-only recovery information."
           },
           "401": {
             "description": "Authentication required"
@@ -6999,7 +6999,8 @@
               "type": "string"
             }
           }
-        ]
+        ],
+        "description": "Only the authenticated storefront owner can access this order. data.payment_recovery reports payment_status, initiation_status, can_resume_payment, payment_url, and requires_reconciliation. HTTPS payment_url is returned only while the order is pending and an existing hosted reservation is initiated. Unknown provider outcomes must be reconciled; browser return does not prove successful payment."
       }
     },
     "/api/v1/storefront/addresses": {
