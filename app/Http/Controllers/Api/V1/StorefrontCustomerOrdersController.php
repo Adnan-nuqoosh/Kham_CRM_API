@@ -38,7 +38,8 @@ final class StorefrontCustomerOrdersController extends Controller
         $reservation=DB::table('myfatoorah_checkout_reservations')
             ->where('order_id',$order->id)->first(['status','payment_url']);
         $pending=$order->payment_status->value==='pending';
-        $initiated=$pending && $reservation && $reservation->status==='initiated';
+        $orderPayable=!in_array($order->status->value,['cancelled','returned'],true);
+        $initiated=$pending && $orderPayable && $reservation && $reservation->status==='initiated';
         $url=$initiated ? (string)($reservation->payment_url??'') : '';
         $resumable=$url!=='' && filter_var($url,FILTER_VALIDATE_URL)
             && parse_url($url,PHP_URL_SCHEME)==='https';
@@ -50,7 +51,7 @@ final class StorefrontCustomerOrdersController extends Controller
             'initiation_status'=>$reservation?->status,
             'can_resume_payment'=>(bool)$resumable,
             'payment_url'=>$resumable ? $url : null,
-            'requires_reconciliation'=>$pending && $reservation
+            'requires_reconciliation'=>$pending && $orderPayable && $reservation
                 && in_array($reservation->status,['reserved','requesting','uncertain'],true),
         ];
 
