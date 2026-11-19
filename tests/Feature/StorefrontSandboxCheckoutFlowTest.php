@@ -23,6 +23,41 @@ final class StorefrontSandboxCheckoutFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_sandbox_routes_fail_closed_in_production_even_when_flags_are_enabled(): void
+    {
+        $this->app->detectEnvironment(fn ()=>'production');
+        config([
+            'commerce.storefront_sandbox_checkout_enabled'=>true,
+            'commerce.myfatoorah_sandbox_enabled'=>true,
+            'commerce.myfatoorah_sandbox_webhook_enabled'=>true,
+            'commerce.configured_shipping_orders_enabled'=>true,
+        ]);
+        try {
+            $this->postJson('/api/v1/storefront/payments/myfatoorah/sandbox-webhook',[])
+                ->assertNotFound();
+            $customer=Customer::create([
+                'first_name'=>'Sandbox','email'=>'sandbox-production-test@example.test',
+                'phone'=>'+201000000000',
+            ]);
+            $account=StorefrontAccount::create([
+                'customer_id'=>$customer->id,
+                'email'=>'sandbox-production-test@example.test',
+                'password'=>'testing-password-123',
+            ]);
+            Sanctum::actingAs($account,['storefront']);
+            $this->postJson('/api/v1/storefront/checkout/sandbox',[])
+                ->assertNotFound();
+        } finally {
+            $this->app->detectEnvironment(fn ()=>'testing');
+        }
+    }
+
+    public function test_sandbox_checkout_requires_customer_authentication(): void
+    {
+        $this->postJson('/api/v1/storefront/checkout/sandbox',[])
+            ->assertUnauthorized();
+    }
+
     public function test_staging_sandbox_checkout_prices_on_server_reserves_once_and_reuses_provider_url(): void
     {
         $currency=Currency::create([
