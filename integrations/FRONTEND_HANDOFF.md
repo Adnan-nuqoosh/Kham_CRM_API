@@ -36,3 +36,18 @@ For staging checkout, follow `integrations/nextjs-staging-checkout/README.md`. I
 2. KHAM website frontend code is in its correct repo, account and checkout screens work and errors are displayed.
 3. Isolated staging API and website are deployed and one mock order is placed and found using **staging** CRM orders API.
 4. No production data/payment modification; live MyFatoorah and public coupons remain OFF.
+
+
+## Payment recovery contract (backend PR #8)
+
+Customer-facing checkout `POST /api/v1/storefront/checkout` is protected with a **storefront customer Bearer token**; MyFatoorah merchant tokens remain private to the Laravel server. A returned hosted payment URL is not proof of paid status. On provider uncertainty or network timeout, **do not generate a fresh idempotency key or create a second order**. Fetch `GET /api/v1/storefront/orders/{orderNumber}` using the same customer's token, and inspect `data.payment_recovery`:
+
+- `payment_status`: stored order payment status, not browser return status.
+- `initiation_status`: hosted reservation status or `null`.
+- `can_resume_payment`: true only if the order is pending, is not cancelled/returned, and its existing reservation is `initiated` with an HTTPS payment URL.
+- `payment_url`: resumable existing hosted payment URL or `null`. Redirect only after user chooses to continue; never embed merchant credentials.
+- `requires_reconciliation`: true for pending reserved/requesting/uncertain sessions. Show a support/review state, not a new Pay Now operation.
+
+Only the order's storefront owner can read this payload (otherwise 404). The frontend should preserve the same idempotency key across retries of a single checkout and use server responses `CHECKOUT_REUSED`, `CHECKOUT_RECONCILIATION_REQUIRED`, `PAYMENT_INITIATION_UNCERTAIN` and `STOREFRONT_CHECKOUT_CREATED` explicitly. Final paid state is confirmed only by a verified MyFatoorah webhook plus provider enquiry.
+
+Pricing: the public quote already returns `tax_calculation_method`, `estimated_total`, `final_payable_total`, `checkout_ready`, and `checkout_blockers`. Use `final_payable_total` only if ready; do not add inclusive tax to displayed price a second time. Market IDs must come from `GET /api/v1/storefront/markets`, not hardcoded numeric mappings. Use readiness from the **selected checkout market**, not a different header market.
