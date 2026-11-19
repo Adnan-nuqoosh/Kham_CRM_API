@@ -120,7 +120,11 @@ final class StorefrontAccountController extends Controller
         }
         $account->forceFill(['password' => $data['password']])->save();
         $currentToken = $account->currentAccessToken();
-        $account->tokens()->when($currentToken, fn ($query) => $query->where('id', '<>', $currentToken->id))->delete();
+        if ($currentToken instanceof \Laravel\Sanctum\PersonalAccessToken) {
+            $account->tokens()->where('id', '<>', $currentToken->id)->delete();
+        } else {
+            $account->tokens()->delete();
+        }
         return ApiResponse::success(null, 'Password updated; other sessions revoked.', 'STOREFRONT_PASSWORD_CHANGED')
             ->header('Cache-Control', 'no-store');
     }
