@@ -17,7 +17,8 @@ final class CouponService
         ?string $code,
         float $subtotal,
         ?int $customerId = null,
-        bool $lockForRedemption = false
+        bool $lockForRedemption = false,
+        ?int $marketId = null
     ): float {
         if ($code === null || trim($code) === '') {
             return 0.0;
@@ -35,9 +36,28 @@ final class CouponService
             || ($coupon->ends_at && now()->gt($coupon->ends_at))) {
             throw ValidationException::withMessages(['coupon_code' => ['Coupon is not currently active.']]);
         }
-        // Coupon targeting rules are not yet standardized; never silently ignore them.
-        if (!empty($coupon->rules)) {
-            throw ValidationException::withMessages(['coupon_code' => ['This coupon requires supported eligibility rules.']]);
+        // Only explicit market restrictions are understood. Never silently
+        // ignore arbitrary product/customer targeting constraints.
+        $rules = $coupon->rules ?? [];
+        if (!is_array($rules) || array_diff(array_keys($rules), ['market_ids'])) {
+            throw ValidationException::withMessages(['coupon_code' => ['Unsupported coupon eligibility rules.']]);
+        }
+        $marketIds = $rules['market_ids'] ?? [];
+        if (!is_array($marketIds) || array_filter($marketIds,
+            fn ($id) => !is_int($id) || $id < 1)) {
+            throw ValidationException::withMessages(['coupon_code' => ['Invalid market eligibility rules.']]);
+        }
+        if ($marketIds !== []) {
+            if ($marketId === null || !in_array($marketId, $marketIds, true)) {
+                throw ValidationException::withMessages(['coupon_code' => ['Coupon is not eligible for this market.']]);
+            }
+        }
+        // A currency-neutral numeric fixed discount would be incorrect across
+        // EGP/AED/SAR. Require an explicitly targeted SINGLE market.
+        if ($coupon->type === 'fixed' && (count($marketIds) !== 1 || $marketId === null)) {
+            throw ValidationException::withMessages([
+                'coupon_code' => ['Fixed coupons require exactly one configured market.'],
+            ]);
         }
         if ($coupon->min_spend !== null && $subtotal < (float) $coupon->min_spend) {
             throw ValidationException::withMessages(['coupon_code' => ['Minimum spend requirement is not met.']]);
