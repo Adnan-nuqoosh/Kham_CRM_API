@@ -44,7 +44,7 @@ class OrderService {
     $qty=(int)$item['quantity'];$line=(float)$price->price*$qty;
     $subtotal+=$line;$lines[]=compact('variant','qty','price','line');
    }
-   $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal);
+   $discount=$this->coupons->discount($payload['coupon_code']??null,$subtotal,$payload['customer_id']??null,true,(int)$payload['market_id']);
    $mode=$payload['shipping_mode']??'manual';
    $shippingRuleId=null;
    $taxMethod='exclusive';
@@ -75,6 +75,9 @@ class OrderService {
     $shipping=(float)$quote['shipping_total'];
     $shippingRuleId=$quote['rule_id'];
     $taxPreview=$this->marketTaxes->preview($market,number_format(max(0,round($subtotal-$discount,4)),4,'.',''),number_format($shipping,4,'.',''));
+    // All configured orders, including local mock orders, must have an
+    // explicitly approved market tax policy. A staging market can use a
+    // separately approved 0% test tax rule; never bypass the check.
     if ($taxPreview['tax_status'] !== 'approved_not_enabled' || $taxPreview['tax_total'] === null) {
      throw ValidationException::withMessages(['tax_total'=>['Market tax policy must be explicitly approved before configured checkout.']]);
     }
@@ -85,6 +88,9 @@ class OrderService {
     $taxMethod=$taxPreview['tax_calculation_method'] ?? 'exclusive';
    }
    $order=Order::create(['order_number'=>$this->nextNumber(),'customer_id'=>$payload['customer_id']??null,'market_id'=>$payload['market_id'],'warehouse_id'=>$warehouseId,'currency_code'=>$lines[0]['price']->currency->code??$lines[0]['price']->currency_id,'status'=>OrderStatus::Pending,'payment_status'=>PaymentStatus::Pending,'fulfillment_status'=>'unfulfilled','subtotal'=>$subtotal,'discount_total'=>$discount,'shipping_total'=>$shipping,'shipping_mode'=>$mode,'shipping_rule_id'=>$shippingRuleId,'tax_total'=>$tax,'grand_total'=>max(0,$subtotal-$discount+$shipping+($taxMethod==='exclusive' ? $tax : 0)),'coupon_code'=>$payload['coupon_code']??null,'notes'=>$payload['notes']??null,'placed_at'=>now()]);
+   if (!empty($payload['coupon_code']) && $discount > 0) {
+    $this->coupons->redeem($payload['coupon_code'],$payload['customer_id']??null,$order->id,$discount);
+   }
    foreach($lines as $row){$order->items()->create(['product_id'=>$row['variant']->product_id,'variant_id'=>$row['variant']->id,'sku'=>$row['variant']->sku,'name'=>$row['variant']->product->name.($row['variant']->title?' - '.$row['variant']->title:''),'quantity'=>$row['qty'],'unit_price'=>$row['price']->price,'discount_total'=>0,'tax_total'=>0,'line_total'=>$row['line'],'unit_cost_snapshot'=>$row['variant']->cost_price !== null && $row['variant']->cost_currency_code !== null ? $row['variant']->cost_price : null,'unit_cost_currency_code'=>$row['variant']->cost_price !== null ? $row['variant']->cost_currency_code : null]);$this->inventory->reserve($row['variant']->id,$warehouseId,$row['qty'],$order->id);}
    foreach(['shipping','billing'] as $type){if(!empty($payload[$type.'_address']))$order->addresses()->create(array_merge($payload[$type.'_address'],['type'=>$type]));}
    return $order->load(['items','addresses','market.currency','warehouse','customer']);

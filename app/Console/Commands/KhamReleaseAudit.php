@@ -11,11 +11,14 @@ use Illuminate\Support\Facades\Schema;
 /** Read-only deploy preflight. Never enables payments or prints secrets. */
 final class KhamReleaseAudit extends Command
 {
-    protected $signature = 'kham:release-audit {--strict : Exit failure if any launch prerequisite is unmet}';
+    protected $signature = 'kham:release-audit
+        {--strict : Exit failure if any prerequisite is unmet}
+        {--launch-ready : Read-only check of conditions required to activate production payments}';
     protected $description = 'Read-only PHP, TLS, DB, shipping, tax, payment and security deployment audit';
 
     public function handle(): int
     {
+        $launchReady=(bool)$this->option('launch-ready');
         $checks=[];
         $checks['PHP >=8.3'] = PHP_VERSION_ID >= 80300;
         $checks['APP_DEBUG disabled'] = config('app.debug') === false;
@@ -27,10 +30,25 @@ final class KhamReleaseAudit extends Command
         $checks['CORS origins explicit'] = $this->corsOriginsSafe();
         $checks['Development mock checkout disabled'] =
             config('commerce.storefront_test_checkout_enabled',false) !== true;
-        $checks['Production payment gate disabled until launch'] =
-            config('commerce.storefront_production_checkout_enabled',false) !== true;
-        $checks['MyFatoorah live flag disabled until launch'] =
-            config('commerce.myfatoorah_live_enabled',false) !== true;
+        if ($launchReady) {
+            $checks['Production payment gate enabled by operator'] =
+                config('commerce.storefront_production_checkout_enabled',false) === true;
+            $checks['MyFatoorah live flag enabled by operator'] =
+                config('commerce.myfatoorah_live_enabled',false) === true;
+            $checks['Configured shipping enabled by operator'] =
+                config('commerce.configured_shipping_orders_enabled',false) === true;
+            $checks['CRM reset URL HTTPS'] =
+                $this->https((string) config('commerce.password_reset_frontend_url'));
+            $checks['Storefront reset URL HTTPS'] =
+                $this->https((string) config('commerce.storefront_password_reset_frontend_url'));
+            $checks['Mail transport configured (verify delivery separately)'] =
+                $this->mailConfigured();
+        } else {
+            $checks['Production payment gate disabled until launch'] =
+                config('commerce.storefront_production_checkout_enabled',false) !== true;
+            $checks['MyFatoorah live flag disabled until launch'] =
+                config('commerce.myfatoorah_live_enabled',false) !== true;
+        }
 
         foreach ($checks as $name => $pass) {
             $this->line(($pass?'[PASS] ':'[FAIL] ').$name);
@@ -48,15 +66,40 @@ final class KhamReleaseAudit extends Command
                 $ready=app(StorefrontCheckoutReadiness::class)->forMarket($market);
                 $this->line('Market '.$market->code.': '.($ready['ready']?'READY':'NOT READY'));
                 foreach($ready['blockers'] as $blocker) $this->line('  - '.$blocker);
-                $checks['Market '.$market->code.' checkout ready']=$ready['ready'];
+                if ($launchReady) {
+                    $checks['Market '.$market->code.' checkout ready']=$ready['ready'];
+                }
+
             }
         }
         $failed=count(array_filter($checks,fn($passed)=>!$passed));
         $this->newLine();
         $this->line('Summary: '.(count($checks)-$failed).'/'.count($checks).' checks passed.');
         $this->line('Security and payment keys are intentionally never displayed.');
+        if ($launchReady) {
+            $this->warn('Read-only launch audit. Passing does not prove merchant credentials, payment methods, SMTP delivery or webhooks work in reality.');
+        } else {
+            $this->line('Safe pre-launch mode: readiness blockers are informational; use --launch-ready --strict for launch checks.');
+        }
         if ($failed && $this->option('strict')) return self::FAILURE;
         return self::SUCCESS;
+    }
+
+    private function mailConfigured(): bool
+    {
+        $mailer=(string) config('mail.default','');
+        if ($mailer==='' || in_array($mailer,['log','array'],true)) return false;
+        $mailers=config('mail.mailers',[]);
+        if (!is_array($mailers) || !isset($mailers[$mailer])) return false;
+        if ($mailer==='smtp') {
+            $smtp=$mailers['smtp'];
+            return is_array($smtp)
+                && trim((string)($smtp['host']??''))!==''
+                && trim((string)($smtp['username']??''))!==''
+                && trim((string)($smtp['password']??''))!=='';
+        }
+        // Non-SMTP transports still require an operator to verify real delivery.
+        return true;
     }
 
     private function https(string $url): bool

@@ -3,6 +3,8 @@
 return [
     // HTTPS CRM frontend reset page; unset means email recovery is disabled.
     'password_reset_frontend_url' => env('CRM_PASSWORD_RESET_FRONTEND_URL'),
+    // Storefront password recovery is disabled unless the HTTPS storefront page is configured.
+    'storefront_password_reset_frontend_url' => env('STOREFRONT_PASSWORD_RESET_FRONTEND_URL'),
     'badges' => [
         'new_days' => (int) env('STOREFRONT_BADGE_NEW_DAYS', 30),
         'bestseller_lookback_days' => (int) env('STOREFRONT_BADGE_BESTSELLER_LOOKBACK_DAYS', 90),
@@ -15,6 +17,8 @@ return [
     'configured_shipping_orders_enabled' => env('COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED', false),
     // Never enables production checkout. Local mock flow only; no real payment.
     'storefront_test_checkout_enabled' => env('COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED', false),
+    // Explicit storefront coupon gate. Leave off until isolated parity tests and launch approval.
+    'storefront_coupons_enabled' => env('COMMERCE_STOREFRONT_COUPONS_ENABLED', false),
     // Independent release gate: defaults off even when provider credentials exist.
     'storefront_production_checkout_enabled' => env('COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED', false),
     'myfatoorah_live_redirect_url' => env('MYFATOORAH_LIVE_REDIRECT_URL'),

@@ -72,6 +72,63 @@ final class StorefrontAccountController extends Controller
             ->header('Cache-Control','no-store');
     }
 
+    /**
+     * Update storefront customer profile. Email changes deliberately require a
+     * separate verified-email workflow and cannot be made through this route.
+     */
+    public function updateProfile(Request $request)
+    {
+        $account = $this->account($request);
+        $data = $request->validate([
+            'first_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'phone' => ['sometimes', 'required', 'string', 'max:30'],
+            'email' => ['prohibited'],
+            'customer_id' => ['prohibited'],
+            'password' => ['prohibited'],
+            'marketing_opt_in' => ['prohibited'],
+        ]);
+        $customer = DB::transaction(function () use ($account, $data) {
+            $customer = Customer::query()->whereKey($account->customer_id)->lockForUpdate()->firstOrFail();
+            $customer->update($data);
+            return $customer->fresh();
+        });
+        return ApiResponse::success($customer, 'Storefront profile updated.', 'STOREFRONT_PROFILE_UPDATED')
+            ->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * Verify the current password before changing it. Revoke other sessions
+     * immediately; the current token remains valid until customer logs out.
+     */
+    public function changePassword(Request $request)
+    {
+        $account = $this->account($request);
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'confirmed', Password::min(12)],
+        ]);
+        if (!Hash::check($data['current_password'], $account->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+        if (Hash::check($data['password'], $account->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['New password must differ from current password.'],
+            ]);
+        }
+        $account->forceFill(['password' => $data['password']])->save();
+        $currentToken = $account->currentAccessToken();
+        if ($currentToken instanceof \Laravel\Sanctum\PersonalAccessToken) {
+            $account->tokens()->where('id', '<>', $currentToken->id)->delete();
+        } else {
+            $account->tokens()->delete();
+        }
+        return ApiResponse::success(null, 'Password updated; other sessions revoked.', 'STOREFRONT_PASSWORD_CHANGED')
+            ->header('Cache-Control', 'no-store');
+    }
+
     public function logout(Request $request)
     {
         $account=$this->account($request);

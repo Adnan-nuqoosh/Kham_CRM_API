@@ -67,7 +67,7 @@ final class PublicStorefrontBootstrapController extends Controller
                 'production_checkout_enabled' => $ready['ready'],
                 'customer_accounts_enabled' => Schema::hasTable('storefront_accounts'),
                 'wishlist_enabled' => Schema::hasTable('storefront_wishlists'),
-                'coupons_enabled' => false,
+                'coupons_enabled' => (bool) config('commerce.storefront_coupons_enabled', false),
                 'local_mock_checkout' => app()->environment('local')
                     && (bool) config('commerce.storefront_test_checkout_enabled', false),
             ],

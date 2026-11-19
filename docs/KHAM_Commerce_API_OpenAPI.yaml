@@ -1,3 +1,5 @@
+# DEPRECATED: Historical schema, not maintained. Use docs/openapi.json as the authoritative API contract.
+# Do not import this YAML into new dashboard or storefront clients.
 openapi: 3.0.3
 info:
   title: KHAM Commerce API

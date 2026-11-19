@@ -42,8 +42,12 @@ Route::prefix('v1')->group(function () {
     Route::post('/storefront/payments/myfatoorah/live-webhook/{marketCode}', StorefrontLiveMyFatoorahWebhookController::class)->where('marketCode', 'EG|AE|SA')->middleware('throttle:storefront-quote');
     Route::post('/storefront/auth/register', [StorefrontAccountController::class, 'register'])->middleware('throttle:login');
     Route::post('/storefront/auth/login', [StorefrontAccountController::class, 'login'])->middleware('throttle:login');
+    Route::post('/storefront/auth/forgot-password', [\App\Http\Controllers\Api\V1\StorefrontPasswordRecoveryController::class, 'forgot'])->middleware('throttle:login');
+    Route::post('/storefront/auth/reset-password', [\App\Http\Controllers\Api\V1\StorefrontPasswordRecoveryController::class, 'reset'])->middleware('throttle:login');
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/storefront/auth/me', [StorefrontAccountController::class, 'me']);
+        Route::patch('/storefront/auth/me', [StorefrontAccountController::class, 'updateProfile'])->middleware('throttle:login');
+        Route::post('/storefront/auth/change-password', [StorefrontAccountController::class, 'changePassword'])->middleware('throttle:login');
         Route::post('/storefront/auth/logout', [StorefrontAccountController::class, 'logout']);
         Route::post('/storefront/checkout', StorefrontProductionCheckoutController::class)->middleware('throttle:storefront-test-order');
         Route::get('/storefront/orders', [StorefrontCustomerOrdersController::class, 'index']);

@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
 
+    ->withCommands([
+        App\Console\Commands\KhamReleaseAudit::class,
+        App\Console\Commands\KhamPaymentReconciliationReport::class,
+        App\Console\Commands\MyFatoorahSandboxCheck::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*
         |--------------------------------------------------------------------------

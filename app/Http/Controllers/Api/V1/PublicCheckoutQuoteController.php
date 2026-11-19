@@ -36,7 +36,8 @@ class PublicCheckoutQuoteController extends Controller
             'items.*.variant_id' => ['required', 'integer', 'distinct:strict', 'exists:product_variants,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'items.*.unit_price' => ['prohibited'],
-            'coupon_code' => ['prohibited'],
+            'coupon_code' => config('commerce.storefront_coupons_enabled', false)
+                ? ['sometimes', 'nullable', 'string', 'max:80'] : ['prohibited'],
             'shipping_address' => ['required', 'array'],
             'shipping_address.country_code' => ['required', 'string', 'size:2'],
             'shipping_address.city' => ['required', 'string', 'max:120'],
@@ -96,14 +97,21 @@ class PublicCheckoutQuoteController extends Controller
             ];
         }
 
+        $viewer = $request->user('sanctum');
+        $customerId = $viewer instanceof \App\Models\StorefrontAccount && $viewer->tokenCan('storefront')
+            ? $viewer->customer_id : null;
+        $discount = app(\App\Services\CouponService::class)->discount(
+            $data['coupon_code'] ?? null, $subtotal, $customerId, false, (int)$market->id
+        );
+        $netSubtotal = max(0, round($subtotal - $discount, 4));
         $shippingQuote = $shipping->quote(
             $market,
             $data['shipping_address']['country_code'],
             $data['shipping_address']['city'],
-            round($subtotal, 4)
+            $netSubtotal
         );
         $shippingTotal = (float) $shippingQuote['shipping_total'];
-        $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($subtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
+        $taxReadiness = app(MarketTaxQuoteService::class)->preview($market, number_format($netSubtotal, 4, '.', ''), number_format($shippingTotal, 4, '.', ''));
         $checkoutReadiness = app(StorefrontCheckoutReadiness::class)->forMarket($market);
 
         // Inclusive tax is already inside the taxable prices. Adding it twice
@@ -112,7 +120,7 @@ class PublicCheckoutQuoteController extends Controller
         $method = $taxReadiness['tax_calculation_method'] ?? null;
         $estimatedTotal = $taxAmount === null ? null
             : number_format(
-                $subtotal + $shippingTotal + ($method === 'exclusive' ? (float) $taxAmount : 0),
+                $netSubtotal + $shippingTotal + ($method === 'exclusive' ? (float) $taxAmount : 0),
                 4, '.', ''
             );
 
@@ -125,10 +133,10 @@ class PublicCheckoutQuoteController extends Controller
             'market_id' => $market->id,
             'currency_code' => $market->currency->code,
             'subtotal' => number_format($subtotal, 4, '.', ''),
-            'discount_total' => '0.0000',
-            'net_subtotal' => number_format($subtotal, 4, '.', ''),
+            'discount_total' => number_format($discount, 4, '.', ''),
+            'net_subtotal' => number_format($netSubtotal, 4, '.', ''),
             'shipping' => $shippingQuote,
-            'total_before_tax' => number_format($subtotal + $shippingTotal, 4, '.', ''),
+            'total_before_tax' => number_format($netSubtotal + $shippingTotal, 4, '.', ''),
             'tax_status' => $taxReadiness['tax_status'],
             'tax_total' => $taxReadiness['tax_total'],
             'tax_calculation_method' => $method,

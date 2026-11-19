@@ -46,7 +46,7 @@ class CheckoutQuoteController extends Controller
             $subtotal += (float) $price->price * (int) $item['quantity'];
         }
 
-        $discount = $coupons->discount($data['coupon_code'] ?? null, $subtotal);
+        $discount = $coupons->discount($data['coupon_code'] ?? null, $subtotal, null, false, (int)$market->id);
         $netSubtotal = max(0, round($subtotal - $discount, 4));
         $shippingQuote = $shipping->quote(
             $market,

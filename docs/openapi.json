@@ -1129,11 +1129,43 @@
               "type": "integer",
               "minimum": 1
             }
+          },
+          {
+            "in": "query",
+            "name": "brand",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "description": "Brand slug or numeric ID"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "description": "Category slug or numeric ID"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "name",
+                "price_asc",
+                "price_desc"
+              ]
+            },
+            "description": "Sort order"
           }
         ],
         "responses": {
           "200": {
-            "description": "STOREFRONT_PRODUCTS with pagination metadata",
+            "description": "STOREFRONT_PRODUCTS with pagination metadata and localized product variants including SKU, available_qty, ratings, category and brand.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1143,101 +1175,12 @@
                       "type": "boolean"
                     },
                     "code": {
-                      "type": "string",
-                      "example": "STOREFRONT_PRODUCTS"
+                      "type": "string"
                     },
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "slug",
-                          "name",
-                          "currency_code",
-                          "variants"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "integer"
-                          },
-                          "slug": {
-                            "type": "string"
-                          },
-                          "badges": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "locale": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "short_description": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "ingredients": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "linked_ingredients": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "integer"
-                                },
-                                "slug": {
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                },
-                                "description": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              }
-                            }
-                          },
-                          "usage_instructions": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "currency_code": {
-                            "type": "string"
-                          },
-                          "variants": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "integer"
-                                },
-                                "title": {
-                                  "type": "string"
-                                },
-                                "price": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "in_stock": {
-                                  "type": "boolean"
-                                }
-                              }
-                            }
-                          }
-                        }
+                        "$ref": "#/components/schemas/StorefrontPublicProduct"
                       }
                     },
                     "meta": {
@@ -1303,99 +1246,10 @@
                       "type": "boolean"
                     },
                     "code": {
-                      "type": "string",
-                      "example": "STOREFRONT_PRODUCT"
+                      "type": "string"
                     },
                     "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "slug",
-                        "name",
-                        "currency_code",
-                        "variants"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "integer"
-                        },
-                        "slug": {
-                          "type": "string"
-                        },
-                        "badges": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "locale": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "short_description": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "description": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "ingredients": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "linked_ingredients": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "integer"
-                              },
-                              "slug": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              },
-                              "description": {
-                                "type": "string",
-                                "nullable": true
-                              }
-                            }
-                          }
-                        },
-                        "usage_instructions": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "currency_code": {
-                          "type": "string"
-                        },
-                        "variants": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "integer"
-                              },
-                              "title": {
-                                "type": "string"
-                              },
-                              "price": {
-                                "type": "string",
-                                "nullable": true
-                              },
-                              "in_stock": {
-                                "type": "boolean"
-                              }
-                            }
-                          }
-                        }
-                      }
+                      "$ref": "#/components/schemas/StorefrontPublicProduct"
                     }
                   }
                 }
@@ -1572,9 +1426,15 @@
                         "maxLength": 120
                       }
                     }
+                  },
+                  "coupon_code": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "nullable": true,
+                    "description": "Optional ONLY when COMMERCE_STOREFRONT_COUPONS_ENABLED=true. For per-customer caps, send a valid storefront Bearer token; fixed-value codes require rules.market_ids with exactly one market. Otherwise 422."
                   }
                 },
-                "description": "Client unit_price and coupon_code are prohibited; stock and prices are server verified."
+                "description": "Unit prices cannot be client-supplied; coupons default OFF and return 422 unless enabled by release-specific feature flag. A quote is non-binding."
               }
             }
           }
@@ -1656,7 +1516,7 @@
             "$ref": "#/components/responses/ValidationError"
           }
         },
-        "description": " Public quote rejects coupon_code and client prices. When release gates pass, final_payable_total is shown. Every checkout re-prices on the server.",
+        "description": "Quotes and live checkout both use server-side coupon validation, net subtotal and tax/shipping parity when the explicitly OFF-by-default coupon flag is enabled. Redemption occurs atomically only on order creation; quoted limits may change before checkout.",
         "x-response-fields": [
           "tax_status",
           "tax_total",
@@ -1983,6 +1843,9 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       },
       "post": {
@@ -1996,7 +1859,7 @@
             "sanctumBearer": []
           }
         ],
-        "description": "Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields.",
+        "description": "Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields. Bilingual fields are documented in #/components/schemas/CrmProductBilingualFields.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2248,6 +2111,9 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       }
     },
@@ -2283,6 +2149,9 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       },
       "post": {
@@ -2296,7 +2165,7 @@
             "sanctumBearer": []
           }
         ],
-        "description": "Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields.",
+        "description": "Nested prices require pricing.manage, stocks require inventory.manage, cost fields require finance.manage. Multipart JSON arrays may be sent as JSON-encoded fields. Bilingual fields are documented in #/components/schemas/CrmProductBilingualFields.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2543,6 +2412,9 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       },
       "put": {
@@ -2802,6 +2674,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmProductBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       },
       "patch": {
@@ -3061,6 +2937,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmProductBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmProductBilingualFields"
         }
       },
       "delete": {
@@ -3149,6 +3029,9 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmCategoryBilingualFields"
         }
       },
       "post": {
@@ -3222,6 +3105,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmCategoryBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmCategoryBilingualFields"
         }
       }
     },
@@ -3257,6 +3144,9 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmCategoryBilingualFields"
         }
       },
       "patch": {
@@ -3326,6 +3216,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmCategoryBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmCategoryBilingualFields"
         }
       },
       "delete": {
@@ -3400,6 +3294,9 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmBrandBilingualFields"
         }
       },
       "post": {
@@ -3470,6 +3367,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmBrandBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmBrandBilingualFields"
         }
       }
     },
@@ -3505,6 +3406,9 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           }
+        },
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmBrandBilingualFields"
         }
       },
       "patch": {
@@ -3571,6 +3475,10 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
+        },
+        "description": "Bilingual fields are documented in #/components/schemas/CrmBrandBilingualFields.",
+        "x-bilingual-fields-schema": {
+          "$ref": "#/components/schemas/CrmBrandBilingualFields"
         }
       },
       "delete": {
@@ -5592,7 +5500,7 @@
         ],
         "responses": {
           "200": {
-            "description": "MARKET_TAX_RULE_LIST"
+            "description": "MARKET_TAX_RULE_LIST; records include is_approved (boolean), approved_at (nullable datetime), approved_by (nullable user ID). Editing a tax policy clears all approval fields."
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
@@ -5868,7 +5776,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "market_id and city_key are immutable; edit shipping_fee/free_shipping_threshold/is_active only. City '*' in a shipping rule is a market-level fallback for unmatched cities."
       }
     },
     "/api/v1/finance/report/export.csv": {
@@ -6042,11 +5951,29 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "FINANCE_EXPENSES"
+            "description": "FINANCE_EXPENSES; data is Laravel paginator and stable meta includes pagination. Accepts per_page 1..100."
           },
           "401": {
             "$ref": "#/components/responses/Unauthenticated"
@@ -6761,7 +6688,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success; standard ApiSuccess envelope"
+            "description": "STOREFRONT_SETTINGS; data.features.coupons_enabled reflects COMMERCE_STOREFRONT_COUPONS_ENABLED (default false)."
           }
         }
       }
@@ -6906,6 +6833,61 @@
             "description": "Feature unavailable or provider requires reconciliation"
           }
         }
+      },
+      "patch": {
+        "operationId": "patch_storefront_auth_me",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Update authenticated customer profile (email changes not supported)",
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "first_name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 100
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 30
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Wrong token scope"
+          },
+          "422": {
+            "description": "Field-level validation error"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
       }
     },
     "/api/v1/storefront/auth/logout": {
@@ -6976,7 +6958,7 @@
     },
     "/api/v1/storefront/orders/{orderNumber}": {
       "get": {
-        "summary": "Fetch only an authenticated customer's own order by order number",
+        "summary": "Fetch authenticated customer's own order plus read-only payment recovery state",
         "tags": [
           "Storefront"
         ],
@@ -6987,7 +6969,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success; standard ApiSuccess envelope"
+            "description": "Own order detail including data.payment_recovery read-only recovery information."
           },
           "401": {
             "description": "Authentication required"
@@ -7017,7 +6999,8 @@
               "type": "string"
             }
           }
-        ]
+        ],
+        "description": "Only the authenticated storefront owner can access this order. data.payment_recovery reports payment_status, initiation_status, can_resume_payment, payment_url, and requires_reconciliation. HTTPS payment_url is returned only while the order is pending and an existing hosted reservation is initiated. Unknown provider outcomes must be reconciled; browser return does not prove successful payment."
       }
     },
     "/api/v1/storefront/addresses": {
@@ -7362,7 +7345,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Authenticated only. Server reprices products, applies validated and enabled coupon (when supplied), then independently recalculates shipping/tax from discounted subtotal. Disabled until all payment/tax/shipping readiness gates pass."
       }
     },
     "/api/v1/storefront/payments/myfatoorah/live-webhook/{marketCode}": {
@@ -7414,7 +7398,7 @@
       "post": {
         "summary": "Finance rejects pending refund; no money moves",
         "tags": [
-          "Storefront"
+          "CRM"
         ],
         "security": [
           {
@@ -7454,7 +7438,7 @@
       "post": {
         "summary": "Original requester withdraws a pending refund; no money moves",
         "tags": [
-          "Storefront"
+          "CRM"
         ],
         "security": [
           {
@@ -7542,6 +7526,160 @@
           },
           "403": {
             "description": "products.manage required"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/change-password": {
+      "post": {
+        "operationId": "post_storefront_auth_change_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Change customer password, revoke other sessions",
+        "security": [
+          {
+            "sanctumBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "current_password",
+                  "password",
+                  "password_confirmation"
+                ],
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "minLength": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "description": "Wrong token scope"
+          },
+          "422": {
+            "description": "Current password mismatch or validation errors"
+          },
+          "429": {
+            "description": "Rate limited"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/forgot-password": {
+      "post": {
+        "operationId": "post_storefront_auth_forgot_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Request storefront customer password reset link; generic response prevents account enumeration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "422": {
+            "description": "Invalid email format"
+          },
+          "429": {
+            "description": "Rate limited"
+          },
+          "503": {
+            "description": "HTTPS reset URL not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/auth/reset-password": {
+      "post": {
+        "operationId": "post_storefront_auth_reset_password",
+        "tags": [
+          "Storefront"
+        ],
+        "summary": "Reset storefront customer password using emailed token; revoke sessions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "token",
+                  "password",
+                  "password_confirmation"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "token": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "minLength": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard ApiSuccess JSON envelope"
+          },
+          "422": {
+            "description": "Invalid or expired token or validation errors"
+          },
+          "429": {
+            "description": "Rate limited"
           }
         }
       }
@@ -7985,6 +8123,12 @@
           },
           "shipping_address": {
             "$ref": "#/components/schemas/StorefrontShippingAddressInput"
+          },
+          "coupon_code": {
+            "type": "string",
+            "maxLength": 80,
+            "nullable": true,
+            "description": "Optional only when COMMERCE_STOREFRONT_COUPONS_ENABLED=true. Otherwise prohibited. Redemption enforced atomically on order creation and bounded by configured market/usage restrictions."
           }
         }
       },
@@ -8099,6 +8243,248 @@
       "KhamCheckoutProfitStatus": {
         "type": "string",
         "description": "Finance report profit_status; exact values should be checked against FinanceReportController before publication."
+      },
+      "CrmProductBilingualFields": {
+        "type": "object",
+        "description": "Bilingual product fields returned by CRM product list/detail and accepted in product create/update subject to ProductStoreRequest.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "short_description": {
+            "type": "string",
+            "nullable": true
+          },
+          "short_description_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "description_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "ingredients": {
+            "type": "string",
+            "nullable": true
+          },
+          "ingredients_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "usage_instructions": {
+            "type": "string",
+            "nullable": true
+          },
+          "usage_instructions_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "seo_title": {
+            "type": "string",
+            "nullable": true
+          },
+          "seo_title_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "seo_description": {
+            "type": "string",
+            "nullable": true
+          },
+          "seo_description_ar": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CrmBrandBilingualFields": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "description_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "slug": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "logo_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "origin_country": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CrmCategoryBilingualFields": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "description_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "slug": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "sort_order": {
+            "type": "integer"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StorefrontPublicProduct": {
+        "type": "object",
+        "description": "data item shape for GET /storefront/products and detail; localized English/Arabic display values depend on locale",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "description_ar": {
+            "type": "string",
+            "nullable": true
+          },
+          "brand_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "brand_slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "brand_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "category_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "category_slug": {
+            "type": "string",
+            "nullable": true
+          },
+          "category_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar"
+            ]
+          },
+          "currency_code": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "review_count": {
+            "type": "integer"
+          },
+          "average_rating": {
+            "type": "number",
+            "nullable": true
+          },
+          "badges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "sku": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "price": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "compare_at_price": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "available_qty": {
+                  "type": "integer"
+                },
+                "in_stock": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "responses": {
