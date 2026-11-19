@@ -43,6 +43,16 @@ These are route permissions rather than a guarantee about the names of staff rol
 - Refund statuses include `pending_approval`, `approved_awaiting_provider`, `rejected`, `cancelled`. Approval **does not transfer funds**. Provider reconciliation is a separate operational process. Rejection requires a reason (5–2000 characters) and a different approver. The pending original requester can cancel.
 - Errors use the standard envelope `{success,code,message,data,meta,errors}`. Validation errors return HTTP 422 with `errors` keyed by input field. Frontends should parse stable `code` values and render `errors[field]`, not solely free-text `message`.
 
+## Storefront coupons (implemented, gated OFF by default)
+
+- `COMMERCE_STOREFRONT_COUPONS_ENABLED=false` is the safe default. The public `/storefront/settings` response publishes `features.coupons_enabled` only if the flag is explicitly set. Enabling this flag is a business/release decision; do not enable on production before end-to-end coupon, tax, shipping and payment QA.
+- When enabled, `coupon_code` is optional in the public quote and authenticated production checkout. Both use backend prices, the discounted net subtotal for shipping/free-shipping thresholds, and the same net subtotal for tax preview.
+- Coupon redemptions are inserted **inside the order transaction**, holding a coupon row lock. `max_uses` and `max_uses_per_customer` are counted from non-cancelled, non-returned orders. Cancelled/returned orders release eligibility in subsequent checks. Existing idempotency keys prevent the same checkout retry creating a second order/redemption.
+- Percentage coupons can apply across markets only when no restricted market list is configured; their discount is capped at the subtotal. Fixed-amount coupons **require** `rules: { "market_ids": [<exactly one numeric market ID>] }`; using one fixed EGP amount in AED/SAR markets would be wrong. Rules other than `market_ids` are deliberately rejected instead of silently ignored.
+- `max_uses_per_customer` coupons require a real storefront account. For public quote preview, include a valid customer bearer token or the preview returns field-level 422. No coupon is reserved during a preview, and eligibility may change before a new order is created.
+- The existing CRM coupon manager's `rules` JSON must be reviewed before enabling. Merchant eligibility policy (returns, per-product targeting, partial refunds) requires explicit product/legal decisions. Manual `POST /orders` uses the same per-customer usage enforcement when a coupon is supplied.
+- Coupons never bypass the live payment, approved tax, or shipping release gates.
+
 ## Staging MyFatoorah test-only routes
 
 - `APP_ENV=local` and `COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED=true` are required for local mock guest checkout; **never configure `APP_ENV=local` on the public production CRM**.
