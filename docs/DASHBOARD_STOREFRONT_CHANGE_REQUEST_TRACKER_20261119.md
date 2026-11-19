@@ -50,6 +50,14 @@ This branch now includes a copy-only integration handoff under `integrations/nex
 
 **This does not wire the existing website checkout button.** The templates must be moved to the real KHAM Next.js repository and integrated with the actual checkout UI before `git pull` on that frontend repo can deploy them.
 
+## Refund and account frontend handoff — GitHub-only
+
+- Added `integrations/kham-dashboard/refunds/RefundActions.tsx`: portable CRM order-detail refund list and permission-driven Approve / Reject / Withdraw actions. Requester cannot approve/reject; only the original requester can withdraw a pending request. This is **not yet installed in the actual KHAM dashboard frontend**.
+- Added `integrations/kham-storefront/account/storefront-account-api.ts`, `CustomerAccountForm.tsx`, and `PasswordRecoveryForm.tsx` for account self-service. These are **portable components**, not integrated into the actual KHAM website checkout/account pages.
+- Added `integrations/FRONTEND_HANDOFF.md` with exact API routes and integration acceptance criteria. The connected GitHub account's `CRM_front_end-` belongs to **Nuqoosh**, not KHAM. It was deliberately not modified.
+- Added `tests/Feature/RefundDashboardActionsTest.php` covering requester/approver permissions, rejection validation, cancellation authorization, audit events and unchanged paid payment status. Backend feature tests ran successfully in GitHub Actions.
+- **Staging environment remains unchanged:** No SSH access, environment variables, MySQL migration, deployed Next.js frontend, or live UI click-through was performed.
+
 ## Release / verification checklist
 
 1. Review the PR and run `php -l` on changed PHP files, `composer test` / `php artisan test` with an **isolated test DB**. Do not run against any live DB.
