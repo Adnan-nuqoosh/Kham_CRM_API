@@ -44,6 +44,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/storefront/auth/login', [StorefrontAccountController::class, 'login'])->middleware('throttle:login');
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/storefront/auth/me', [StorefrontAccountController::class, 'me']);
+        Route::patch('/storefront/auth/me', [StorefrontAccountController::class, 'updateProfile'])->middleware('throttle:login');
+        Route::post('/storefront/auth/change-password', [StorefrontAccountController::class, 'changePassword'])->middleware('throttle:login');
         Route::post('/storefront/auth/logout', [StorefrontAccountController::class, 'logout']);
         Route::post('/storefront/checkout', StorefrontProductionCheckoutController::class)->middleware('throttle:storefront-test-order');
         Route::get('/storefront/orders', [StorefrontCustomerOrdersController::class, 'index']);
