@@ -123,6 +123,12 @@ final class StorefrontAccountAccessTest extends TestCase
             ->assertJsonPath('data.payment_recovery.payment_url','https://payment.example.test/hosted/123')
             ->assertJsonPath('data.payment_recovery.requires_reconciliation',false);
 
+        $order->update(['status'=>'cancelled']);
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.payment_recovery.can_resume_payment',false)
+            ->assertJsonPath('data.payment_recovery.payment_url',null);
+        $order->update(['status'=>'pending']);
+
         $order->update(['payment_status'=>'paid']);
         $this->getJson($url)->assertOk()
             ->assertJsonPath('data.payment_recovery.can_resume_payment',false)
