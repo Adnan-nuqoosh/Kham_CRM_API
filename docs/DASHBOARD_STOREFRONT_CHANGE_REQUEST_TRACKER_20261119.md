@@ -32,6 +32,12 @@ This checklist tracks the two frontend-team change request documents against the
 - Frontend dashboard refunds UI, storefront customer account pages, market selection consuming `/storefront/markets`, and secure isolated staging checkout connection require **frontend repo changes**, not this backend branch.
 - Product catalog filters, Arabic field schemas, finance pagination, tax/shipping descriptions and storefront account contracts are updated in `docs/openapi.json`; see `docs/CHANGE_REQUEST_OPERATOR_GUIDE_20261119.md` for RBAC, refunds, sandbox requirements and error contract. Ingredient/quiz archive semantics documentation is **explicitly excluded at the requester's direction**.
 
+## Latest QA milestone — isolated mock order → CRM Orders API
+
+- Fixed a mismatch in local-only mock checkout: non-payable `mock_fatoora` QA orders with `tax_total=0` may be created without an approved production tax policy **only** when `APP_ENV=local`, `COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED=true` and the explicitly trusted local controller passes its test-order override. Production `OrderService::create` still requires an approved market tax policy in configured mode.
+- Added `tests/Feature/LocalMockOrderCrmFlowTest.php` to verify creation of the mock order, a pending mock payment, one and only one order after the same idempotency key is retried, correct stock reservation, and visibility through the authenticated `GET /api/v1/orders` CRM endpoint. The disabled-route behavior is also covered.
+- This is automated **isolated test DB** coverage, not evidence that `staging.khambeauty.com` currently reaches `127.0.0.1:8101` or displays the order. A secure Next.js server-side proxy and frontend/order dashboard integration must still be deployed and verified separately.
+
 ## Release / verification checklist
 
 1. Review the PR and run `php -l` on changed PHP files, `composer test` / `php artisan test` with an **isolated test DB**. Do not run against any live DB.
