@@ -109,12 +109,37 @@ class LocalGuestCheckoutController extends Controller
             $shipping['email'] = $data['customer']['email'];
             $shipping['phone'] = $shipping['phone'] ?? $data['customer']['phone'];
 
+            // Match OrderService configured-mode expectation: submit the
+            // server-previewed approved tax (not a hardcoded 0).
+            $subtotalPreview = 0.0;
+            foreach ($data['items'] as $item) {
+                $variant = ProductVariant::findOrFail($item['variant_id']);
+                $price = app(\App\Services\PricingService::class)->priceFor($variant, (int) $market->id);
+                $subtotalPreview += ((float) $price->price) * (int) $item['quantity'];
+            }
+            $shipQuote = app(\App\Services\ShippingQuoteService::class)->quote(
+                $market,
+                $shipping['country_code'],
+                $shipping['city'],
+                max(0, round($subtotalPreview, 4))
+            );
+            $taxPreview = app(\App\Services\MarketTaxQuoteService::class)->preview(
+                $market,
+                number_format(max(0, round($subtotalPreview, 4)), 4, '.', ''),
+                number_format((float) $shipQuote['shipping_total'], 4, '.', '')
+            );
+            if (($taxPreview['tax_status'] ?? null) !== 'approved_not_enabled' || $taxPreview['tax_total'] === null) {
+                throw ValidationException::withMessages([
+                    'tax_total' => ['Market tax policy must be explicitly approved before configured checkout.'],
+                ]);
+            }
+
             $order = $orders->create([
                 'market_id' => $market->id,
                 'customer_id' => $customer->id,
                 'items' => $data['items'],
                 'shipping_mode' => 'configured',
-                'tax_total' => 0,
+                'tax_total' => (float) $taxPreview['tax_total'],
                 'shipping_address' => $shipping,
             ], true);
 
