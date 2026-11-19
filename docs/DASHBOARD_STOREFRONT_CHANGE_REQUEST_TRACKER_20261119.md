@@ -25,7 +25,7 @@ This checklist tracks the two frontend-team change request documents against the
 
 ## Intentionally not enabled automatically
 
-- **Storefront coupons:** No coupon acceptance in live public quote/production checkout. Enable only after coupon eligibility, redemption limits, idempotency, taxes, usage rollback, and price parity tests. Do not merely remove `prohibited` validation or flip `coupons_enabled`.
+- **Storefront coupons:** Gated backend implementation now exists: coupon usage limits, single-market restriction for fixed discounts, atomic redemption on order creation, checkout/quote net-subtotal parity, and dedicated automated tests. `COMMERCE_STOREFRONT_COUPONS_ENABLED` defaults false. Business approval, frontend promo field and complete refund/payment lifecycle verification remain mandatory before enabling this switch in production.
 - **Public guest order lookup:** Not applicable to current authenticated-only production checkout; no unauthenticated order lookup is added, to avoid disclosing customer orders. A future guest-checkout product decision must precede designing a rate-limited proof-of-ownership lookup.
 - **MyFatoorah/live checkout:** Keep `COMMERCE_STOREFRONT_PRODUCTION_CHECKOUT_ENABLED=false`, `MYFATOORAH_LIVE_ENABLED=false`, and `COMMERCE_CONFIGURED_SHIPPING_ORDERS_ENABLED=false` until market readiness, verified merchant/webhooks and tax/shipping approval. Keep test checkout local-only and isolated from production data.
 - Legacy `docs/KHAM_Commerce_API_OpenAPI.yaml` now carries an explicit deprecation header. `docs/openapi.json` is authoritative.
@@ -43,4 +43,4 @@ This checklist tracks the two frontend-team change request documents against the
 
 ## Status
 
-This branch implements customer profile/password changes, isolated reset infrastructure, seeder parity, OpenAPI catalog/finance/bilingual corrections and detailed operator docs. Archive semantics are skipped as requested; legacy frontend market IDs are outside backend scope. **Still pending**: frontend UI changes, live environment/SMTP setup, staging end-to-end verification, safe coupon redemption support, and payment/shipping/tax production launch gates. Guest order lookup is not applicable to the current authenticated-only production checkout.
+This branch implements customer profile/password changes, isolated reset infrastructure, seeder parity, OpenAPI catalog/finance/bilingual corrections and detailed operator docs. Archive semantics are skipped as requested; legacy frontend market IDs are outside backend scope. **Still pending**: frontend UI changes, live environment/SMTP setup, staging end-to-end verification, coupon release approval and frontend UI, and payment/shipping/tax production launch gates. Guest order lookup is not applicable to the current authenticated-only production checkout.
