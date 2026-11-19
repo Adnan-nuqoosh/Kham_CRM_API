@@ -34,7 +34,7 @@ This checklist tracks the two frontend-team change request documents against the
 
 ## Latest QA milestone — isolated mock order → CRM Orders API
 
-- Fixed a mismatch in local-only mock checkout: non-payable `mock_fatoora` QA orders with `tax_total=0` may be created without an approved production tax policy **only** when `APP_ENV=local`, `COMMERCE_STOREFRONT_TEST_CHECKOUT_ENABLED=true` and the explicitly trusted local controller passes its test-order override. Production `OrderService::create` still requires an approved market tax policy in configured mode.
+- Fixed a mismatch in local-only mock checkout: non-payable `mock_fatoora` QA orders with `tax_total=0` require an explicitly **approved 0% staging market tax rule**. The shared `OrderService::create` enforces approved tax policy even in local QA configured-shipping mode; production tax checks are unchanged.
 - Added `tests/Feature/LocalMockOrderCrmFlowTest.php` to verify creation of the mock order, a pending mock payment, one and only one order after the same idempotency key is retried, correct stock reservation, and visibility through the authenticated `GET /api/v1/orders` CRM endpoint. The disabled-route behavior is also covered.
 - This is automated **isolated test DB** coverage, not evidence that `staging.khambeauty.com` currently reaches `127.0.0.1:8101` or displays the order. A secure Next.js server-side proxy and frontend/order dashboard integration must still be deployed and verified separately.
 
