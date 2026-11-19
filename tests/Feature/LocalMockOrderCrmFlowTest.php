@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Currency;
 use App\Models\InventoryStock;
 use App\Models\Market;
+use App\Models\MarketTaxRule;
 use App\Models\Product;
 use App\Models\ProductMarketPrice;
 use App\Models\ProductVariant;
@@ -54,6 +55,17 @@ final class LocalMockOrderCrmFlowTest extends TestCase
             'market_id'=>$market->id,'city_key'=>'cairo',
             'shipping_fee'=>'20.0000','is_active'=>true,
         ]);
+        $approver = User::create([
+            'name'=>'Test Tax Approver','email'=>'qa-tax@example.test',
+            'password'=>'a-test-password-123',
+        ]);
+        $tax = MarketTaxRule::create([
+            'market_id'=>$market->id,'rate_percent'=>'0.0000',
+            'calculation_method'=>'exclusive','tax_shipping'=>false,
+        ]);
+        $tax->forceFill([
+            'is_approved'=>true,'approved_at'=>now(),'approved_by'=>$approver->id,
+        ])->save();
         $payload = [
             'idempotency_key'=>'qa-mock-order-unique-key-2026',
             'market_id'=>$market->id,
